@@ -8,8 +8,24 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type dataNode struct{
+	address string
+}
+
+dataNodes := []dataNode{}
+
+func AddDataNode(address string){
+	dataNodes = append(dataNodes, dataNode{address:address})
+}
+
 func main() {
+	AddDataNode("localhost:8080")
+	AddDataNode("localhost:8080")
+	AddDataNode("localhost:8080")
 	r := mux.NewRouter()
+	s1 := r.Host(dataNodes[0].address).Subrouter()
+	s2 := r.Host(dataNodes[0].address).Subrouter()
+	s3 := r.Host(dataNodes[0].address).Subrouter()
 	file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
 	file.Methods("GET").HandlerFunc(FileGetHandler)
 	file.Methods("POST").HandlerFunc(FileCreateHandler)
