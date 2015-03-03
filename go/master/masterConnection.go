@@ -8,30 +8,29 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type dataNode struct{
-	address string
-}
-
-dataNodes := []dataNode{}
-
-func AddDataNode(address string){
-	dataNodes = append(dataNodes, dataNode{address:address})
+type dataNodes struct{
+	node []string
 }
 
 func main() {
-	AddDataNode("localhost:8080")
-	AddDataNode("localhost:8080")
-	AddDataNode("localhost:8080")
+	nodes := dataNodes{}
+	AddDataNode(nodes, "localhost:8080")
+	AddDataNode(nodes, "localhost:8080")
+	AddDataNode(nodes, "localhost:8080")
 	r := mux.NewRouter()
-	s1 := r.Host(dataNodes[0].address).Subrouter()
-	s2 := r.Host(dataNodes[0].address).Subrouter()
-	s3 := r.Host(dataNodes[0].address).Subrouter()
+	//s1 := r.Host(nodes.node[0]).Subrouter()
+	//s2 := r.Host(nodes.node[0]).Subrouter()
+	//s3 := r.Host(nodes.node[0]).Subrouter()
 	file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
 	file.Methods("GET").HandlerFunc(FileGetHandler)
 	file.Methods("POST").HandlerFunc(FileCreateHandler)
 	file.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
 	http.ListenAndServe(":8080", r)
+}
+
+func AddDataNode(nodes dataNodes, node string){
+	nodes.node = append(nodes.node, node)
 }
 
 func FileCreateHandler(rw http.ResponseWriter, r *http.Request) {
