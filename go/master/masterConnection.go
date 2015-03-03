@@ -4,7 +4,6 @@ import (
 	"fmt"
 	//"io/ioutil"
 	"net/http"
-
 	"github.com/gorilla/mux"
 )
 
@@ -14,9 +13,9 @@ type dataNodes struct{
 
 func main() {
 	nodes := dataNodes{}
-	AddDataNode(nodes, "localhost:8080")
-	AddDataNode(nodes, "localhost:8080")
-	AddDataNode(nodes, "localhost:8080")
+	nodes = AddDataNode(nodes, "localhost:8080")
+	nodes = AddDataNode(nodes, "localhost:8080")
+	nodes = AddDataNode(nodes, "localhost:8080")
 	r := mux.NewRouter()
 	//s1 := r.Host(nodes.node[0]).Subrouter()
 	//s2 := r.Host(nodes.node[0]).Subrouter()
@@ -29,8 +28,22 @@ func main() {
 	http.ListenAndServe(":8080", r)
 }
 
-func AddDataNode(nodes dataNodes, node string){
+func AddDataNode(nodes dataNodes, node string) dataNodes{
 	nodes.node = append(nodes.node, node)
+	return nodes
+}
+
+func RemoveDataNode(nodes dataNodes, node string) dataNodes{
+	if len(nodes.node) == 0 {
+		return nodes
+	}
+	for i := range nodes.node{
+		if nodes.node[i] == node {
+			nodes.node[i] = nodes.node[len(nodes.node)-1]
+			nodes.node = nodes.node[:len(nodes.node)-1]
+		}
+	}
+	return nodes
 }
 
 func FileCreateHandler(rw http.ResponseWriter, r *http.Request) {
