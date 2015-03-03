@@ -13,6 +13,7 @@ func main() {
 	file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
 	file.Methods("GET").HandlerFunc(FileGetHandler)
 	file.Methods("POST").HandlerFunc(FileCreateHandler)
+	file.Methods("DELETE").HandlerFunc(FileDeletehandler)
 
 	http.ListenAndServe(":8080", r)
 }
@@ -33,5 +34,15 @@ func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	fmt.Fprintf(rw, "Get file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
+
+}
+
+func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
+	faculty := mux.Vars(r)["faculty"]
+	course := mux.Vars(r)["course"]
+	year := mux.Vars(r)["year"]
+	id := mux.Vars(r)["id"]
+
+	fmt.Fprintf(rw, "Delete file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
 
 }
