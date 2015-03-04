@@ -23,27 +23,31 @@ func main() {
 }
 
 func searchDB(rw http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("mysql", "ad0163:cwtfnrW5@195.178.235.60/websql/ad0163")
+
+	fmt.Print("INIT!\n")
+	//db, err := sql.Open("mysql", "ad0163:cwtfnrW5@195.178.235.60/ad0163")
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 
 	checkError(err, rw)
 
 	id := mux.Vars(r)["id"]
 
-	rows, err := db.Query("SELECT ip FROM servers JOIN fileServer on servers.id=fileserver.server_id WHERE id=?", id)
+	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver on servers.id=fileserver.server_id WHERE file_id=?", id)
 	checkError(err, rw)
 
 	for rows.Next() {
-		var ip int
+		var ip string
 
 		err = rows.Scan(&ip)
 		checkError(err, rw)
 
-		fmt.Fprintf(rw, "IP: %s", ip)
+		fmt.Print("IP: ", ip)
+		fmt.Fprintf(rw, "\nIP: %s", ip)
 	}
 }
 
 func checkError(err error, rw http.ResponseWriter) {
 	if err != nil {
-		fmt.Fprintf(rw, "Error: %s", err)
+		fmt.Print("Error: ", err, "<----ERROR----\n")
 	}
 }
