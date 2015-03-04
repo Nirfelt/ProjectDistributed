@@ -8,7 +8,12 @@ import (
 )
 
 type dataNodes struct{
-	node []string
+	node []node
+}
+
+type node struct{
+	address string
+	ok bool
 }
 
 func main() {
@@ -28,7 +33,8 @@ func main() {
 	http.ListenAndServe(":8080", r)
 }
 
-func AddDataNode(nodes dataNodes, node string) dataNodes{
+func AddDataNode(nodes dataNodes, address string) dataNodes{
+	node := node{address: address, ok: false}
 	nodes.node = append(nodes.node, node)
 	return nodes
 }
@@ -38,7 +44,7 @@ func RemoveDataNode(nodes dataNodes, node string) dataNodes{
 		return nodes
 	}
 	for i := range nodes.node{
-		if nodes.node[i] == node {
+		if nodes.node[i].address == node {
 			nodes.node[i] = nodes.node[len(nodes.node)-1]
 			nodes.node = nodes.node[:len(nodes.node)-1]
 		}
