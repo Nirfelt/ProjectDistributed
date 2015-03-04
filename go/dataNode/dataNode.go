@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"mime/multipart"
+	//"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -21,7 +21,7 @@ func main() {
 	file.Methods("GET").HandlerFunc(FileGetHandler)
 	file.Methods("POST").HandlerFunc(FileCreateHandler)
 	file.Methods("DELETE").HandlerFunc(FileDeleteHandler)
-	uFile := r.Path("/upload/{id}").Subrouter()
+	uFile := r.Path("/receive/{id}").Subrouter()
 	uFile.Methods("POST").HandlerFunc(UploadHandler)
 
 	http.ListenAndServe(":8080", r)
