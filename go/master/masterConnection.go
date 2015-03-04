@@ -5,6 +5,8 @@ import (
 	//"io/ioutil"
 	"net/http"
 	"github.com/gorilla/mux"
+	//"os"
+	"net/url"
 )
 
 type dataNodes struct{
@@ -16,11 +18,13 @@ type node struct{
 	ok bool
 }
 
+var nodes = dataNodes{} // List with dataNodes (struct)
+
 func main() {
-	nodes := dataNodes{}
-	nodes = AddDataNode(nodes, "localhost:8080")
-	nodes = AddDataNode(nodes, "localhost:8080")
-	nodes = AddDataNode(nodes, "localhost:8080")
+	
+	AddDataNode("localhost:8080")
+	AddDataNode("localhost:8080")
+	AddDataNode("localhost:8080")
 	r := mux.NewRouter()
 	//s1 := r.Host(nodes.node[0]).Subrouter()
 	//s2 := r.Host(nodes.node[0]).Subrouter()
@@ -33,15 +37,14 @@ func main() {
 	http.ListenAndServe(":8080", r)
 }
 
-func AddDataNode(nodes dataNodes, address string) dataNodes{
+func AddDataNode(address string){
 	node := node{address: address, ok: false}
 	nodes.node = append(nodes.node, node)
-	return nodes
 }
 
-func RemoveDataNode(nodes dataNodes, node string) dataNodes{
+func RemoveDataNode(node string){
 	if len(nodes.node) == 0 {
-		return nodes
+		return
 	}
 	for i := range nodes.node{
 		if nodes.node[i].address == node {
@@ -49,10 +52,18 @@ func RemoveDataNode(nodes dataNodes, node string) dataNodes{
 			nodes.node = nodes.node[:len(nodes.node)-1]
 		}
 	}
-	return nodes
 }
 
 func FileCreateHandler(rw http.ResponseWriter, r *http.Request) {
+	for i := range nodes.node{
+		if nodes.node[i].ok == true{
+			resp, err := http.PostForm(nodes.node[i].address, url.Values{"key": {"Value"}, "id": {"123"}})
+			if err != nil {
+				fmt.Println("ERROR")
+			}
+			defer resp.Body.Close()
+		}
+	}
 	faculty := mux.Vars(r)["faculty"]
 	course := mux.Vars(r)["course"]
 	year := mux.Vars(r)["year"]
