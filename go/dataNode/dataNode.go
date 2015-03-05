@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	//"mime/multipart"
+	//"net"
 	"net/http"
 	"os"
 	"path"
@@ -17,10 +18,15 @@ var basePath string = os.Getenv("HOME")
 
 func main() {
 	r := mux.NewRouter()
-	file := r.Path("/{id}").Subrouter()
-	file.Methods("GET").HandlerFunc(FileGetHandler)
-	file.Methods("POST").HandlerFunc(FileUploadHandler)
-	file.Methods("DELETE").HandlerFunc(FileDeleteHandler)
+
+	update := r.Path("/update").Subrouter()
+	update.Methods("POST").HandlerFunc(FileUploadHandler)
+
+	remove := r.Path("/delete/{id}").Subrouter()
+	remove.Methods("DELETE").HandlerFunc(FileDeleteHandler)
+
+	get := r.Path("/get/{id}").Subrouter()
+	get.Methods("GET").HandlerFunc(FileGetHandler)
 
 	http.ListenAndServe(":8080", r)
 }
@@ -45,6 +51,7 @@ func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
 
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	//id := r.FormValue("id")
 
 	filePath := path.Join(basePath, id)
 
@@ -60,12 +67,13 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	//id := mux.Vars(r)["id"]
 	faculty := r.FormValue("faculty")
 	course := r.FormValue("course")
 	year := r.FormValue("year")
+	id := r.FormValue("id")
 
-	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s", faculty, course, year)
+	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s\n", faculty, course, year)
 	// the FormFile function takes in the POST input id file
 	file, _, err := r.FormFile("file")
 
