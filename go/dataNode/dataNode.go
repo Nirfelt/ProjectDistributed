@@ -17,48 +17,19 @@ var basePath string = os.Getenv("HOME")
 
 func main() {
 	r := mux.NewRouter()
-	file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
+	file := r.Path("/{id}").Subrouter()
 	file.Methods("GET").HandlerFunc(FileGetHandler)
-	file.Methods("POST").HandlerFunc(FileCreateHandler)
+	file.Methods("POST").HandlerFunc(FileUploadHandler)
 	file.Methods("DELETE").HandlerFunc(FileDeleteHandler)
-	uFile := r.Path("/receive/{id}").Subrouter()
-	uFile.Methods("POST").HandlerFunc(UploadHandler)
 
 	http.ListenAndServe(":8080", r)
 }
 
-func FileCreateHandler(rw http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-
-	filePath := path.Join(basePath, id)
-	body, _ := ioutil.ReadAll(r.Body)
-
-	if _, err := os.Stat(filePath); err == nil {
-		rw.WriteHeader(http.StatusConflict)
-		rw.Write([]byte("File exists"))
-		return
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("Error: " + err.Error()))
-		return
-	}
-	defer file.Close()
-
-	file.Write(body)
-	file.Sync()
-
-	rw.WriteHeader(http.StatusOK)
-
-	log.Printf("Created file with id: %s\n", id)
-	fmt.Fprintf(rw, "File path: %s", filePath)
-}
-
 func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
+	//Takes the id from url
 	id := mux.Vars(r)["id"]
 
+	//set file path
 	filePath := path.Join(basePath, id)
 
 	data, err := ioutil.ReadFile(filePath)
@@ -88,23 +59,28 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 	log.Printf("Deleted file with id: %s\n", id)
 }
 
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
+func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	faculty := r.FormValue("faculty")
+	course := r.FormValue("course")
+	year := r.FormValue("year")
 
-	filePath := path.Join(basePath, id)
+	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s", faculty, course, year)
 	// the FormFile function takes in the POST input id file
-	file, header, err := r.FormFile("file")
+	file, _, err := r.FormFile("file")
 
 	if err != nil {
-		fmt.Fprintln(w, err)
+		fmt.Fprintln(rw, err)
 		return
 	}
+
+	filePath := path.Join(basePath, id)
 
 	defer file.Close()
 
 	out, err := os.Create(filePath)
 	if err != nil {
-		fmt.Fprintf(w, "Unable to create the file for writing.")
+		fmt.Fprintf(rw, "Unable to create the file for writing.")
 		return
 	}
 
@@ -113,11 +89,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// write the content from POST to the file
 	_, err = io.Copy(out, file)
 	if err != nil {
-		fmt.Fprintln(w, err)
+		fmt.Fprintln(rw, err)
 	}
 
-	fmt.Fprintf(w, "File uploaded successfully : ")
-	fmt.Fprintf(w, header.Filename)
+	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
 }
 
 //Function to get all files from another data node

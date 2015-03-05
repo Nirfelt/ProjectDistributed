@@ -1,11 +1,21 @@
- <html>
+<html>
  <title>Go upload</title>
  <body>
 
- <form action="http://localhost:9090/testUpload" method="post" enctype="multipart/form-data">
- <label for="file">Filename:</label>
- <input type="file" name="file" id="file">
- <input type="submit" name="submit" value="Submit">
+ <form action="http://localhost:8080/1234" method="post" enctype="multipart/form-data">
+	 <label for="faculty">Faculty:</label>
+	 <input type="text" name="faculty" id="faculty"><br>
+
+	 <label for="course">Course:</label>
+	 <input type="text" name="course" id="course"><br>
+
+	 <label for="year">Year:</label>
+	 <input type="number" name="year" id="year"><br>
+
+	 <label for="file">Filename:</label>
+	 <input type="file" name="file" id="file"><br>
+
+	 <input type="submit" name="submit" value="Submit"> 
  </form>
 
  </body>
