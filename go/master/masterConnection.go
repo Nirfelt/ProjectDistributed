@@ -21,7 +21,7 @@ type node struct{
 var nodes = dataNodes{} // List with dataNodes (struct)
 
 func main() {
-	
+	//Declare functions
 	AddDataNode("localhost:8080")
 	AddDataNode("localhost:8080")
 	AddDataNode("localhost:8080")
@@ -40,6 +40,7 @@ func main() {
 func AddDataNode(address string){
 	node := node{address: address, ok: false}
 	nodes.node = append(nodes.node, node)
+	//update DB
 }
 
 func RemoveDataNode(node string){
@@ -52,9 +53,11 @@ func RemoveDataNode(node string){
 			nodes.node = nodes.node[:len(nodes.node)-1]
 		}
 	}
+	//Update DB
 }
 
 func FileCreateHandler(rw http.ResponseWriter, r *http.Request) {
+	//Multicast post file to all datanodes
 	for i := range nodes.node{
 		if nodes.node[i].ok == true{
 			resp, err := http.PostForm(nodes.node[i].address, url.Values{"key": {"Value"}, "id": {"123"}})
@@ -89,3 +92,7 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(rw, "Deleted file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
 }
+
+//func get datanode ip 
+
+//func return all files and folders

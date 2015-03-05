@@ -44,6 +44,7 @@ func searchDB(rw http.ResponseWriter, r *http.Request) {
 		fmt.Print("IP: ", ip)
 		fmt.Fprintf(rw, "\nIP: %s", ip)
 	}
+	//return ip as string
 }
 
 func checkError(err error, rw http.ResponseWriter) {
@@ -51,3 +52,13 @@ func checkError(err error, rw http.ResponseWriter) {
 		fmt.Print("Error: ", err, "<----ERROR----\n")
 	}
 }
+
+//func get json of all files and folders
+
+//func add file, file location ip
+
+//func delete file, file location
+
+//func add new node
+
+//func delete node
