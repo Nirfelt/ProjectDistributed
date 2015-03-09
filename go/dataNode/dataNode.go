@@ -28,7 +28,7 @@ func main() {
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":8082", r)
 }
 
 func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,6 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintln(rw, err)
 	}
-
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
 }
 

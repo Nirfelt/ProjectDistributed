@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
-	//"io/ioutil"
+	//"io"
 	"net/http"
 	"github.com/gorilla/mux"
 	//"os"
 	"net/url"
+	//"bytes"
+	"flag"
+	"log"
+	//"mime/multipart"
+	"unicode"
+	"strings"
 )
 
 type dataNodes struct{
@@ -20,25 +26,30 @@ type node struct{
 
 var nodes = dataNodes{} // List with dataNodes (struct)
 
+var (
+	listen = flag.String("listen", "localhost:8080", "listen on address")
+	logp = flag.Bool("log", false, "enable logging")
+)
+
 func main() {
 	//Declare functions
-	AddDataNode("localhost:8080")
-	AddDataNode("localhost:8080")
-	AddDataNode("localhost:8080")
-	r := mux.NewRouter()
-	//s1 := r.Host(nodes.node[0]).Subrouter()
-	//s2 := r.Host(nodes.node[0]).Subrouter()
-	//s3 := r.Host(nodes.node[0]).Subrouter()
-	file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
-	file.Methods("GET").HandlerFunc(FileGetHandler)
-	file.Methods("POST").HandlerFunc(FileCreateHandler)
-	file.Methods("DELETE").HandlerFunc(FileDeleteHandler)
+	flag.Parse()
+	AddDataNode("localhost:8081")
+	//AddDataNode("localhost:8082")
+	//r := mux.NewRouter()
+	//update := r.Path("/update")//.Subrouter()
+	//update.Methods("POST").HandlerFunc(FileUploadHandler)
+	proxyHandler := http.HandlerFunc(proxyHandlerFunc)
+	log.Fatal(http.ListenAndServe(*listen, proxyHandler))
 
-	http.ListenAndServe(":8080", r)
+	//err := http.ListenAndServe(":8080", r)
+	//if err != nil{
+	//	log.Fatal("ListenAndServe: ", err)
+	//}
 }
 
 func AddDataNode(address string){
-	node := node{address: address, ok: false}
+	node := node{address: address, ok: true}
 	nodes.node = append(nodes.node, node)
 	//update DB
 }
@@ -56,23 +67,28 @@ func RemoveDataNode(node string){
 	//Update DB
 }
 
-func FileCreateHandler(rw http.ResponseWriter, r *http.Request) {
-	//Multicast post file to all datanodes
-	for i := range nodes.node{
-		if nodes.node[i].ok == true{
-			resp, err := http.PostForm(nodes.node[i].address, url.Values{"key": {"Value"}, "id": {"123"}})
-			if err != nil {
-				fmt.Println("ERROR")
-			}
-			defer resp.Body.Close()
-		}
-	}
-	faculty := mux.Vars(r)["faculty"]
-	course := mux.Vars(r)["course"]
-	year := mux.Vars(r)["year"]
-	id := mux.Vars(r)["id"]
+func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 
-	fmt.Fprintf(rw, "Created file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
+	for i := 0; i < len(nodes.node); i++ {
+		req := r
+		client := &http.Client{}
+		req.RequestURI = ""
+
+		u, err := url.Parse("http://" + nodes.node[i].address + "/update")
+	    if err != nil {
+	        panic(err)
+	    }   
+	    req.URL = u
+	    fmt.Println(u.String())
+		req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
+		// And proxy
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp.Write(rw)
+	}
+	
 }
 
 func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
