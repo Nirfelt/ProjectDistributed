@@ -35,7 +35,7 @@ func main() {
 	//Declare functions
 	flag.Parse()
 	AddDataNode("localhost:8081")
-	//AddDataNode("localhost:8082")
+	AddDataNode("localhost:8083")
 	//r := mux.NewRouter()
 	//update := r.Path("/update")//.Subrouter()
 	//update.Methods("POST").HandlerFunc(FileUploadHandler)
@@ -68,7 +68,7 @@ func RemoveDataNode(node string){
 }
 
 func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
-
+	
 	for i := 0; i < len(nodes.node); i++ {
 		req := r
 		client := &http.Client{}
