@@ -14,14 +14,14 @@ import (
 
 func main() {
 	r := mux.NewRouter()
-	//file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
-	//file.Methods("GET").HandlerFunc(GetServerIdHoldingFile)
-	//file.Methods("POST").HandlerFunc(FileCreateHandler)
-	//file.Methods("DELETE").HandlerFunc(FileDeletehandler)
+	get := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
+	get.Methods("GET").HandlerFunc(GetServerIdHoldingFile)
 
-	file := r.Path("/{ip}/{file}").Subrouter()
-	//file.Methods("GET").HandlerFunc(AddNode)
-	file.Methods("GET").HandlerFunc(DeleteNode)
+	add := r.Path("/add/{ip}").Subrouter()
+	add.Methods("POST").HandlerFunc(AddNode)
+
+	remove := r.Path("/delete/{ip}").Subrouter()
+	remove.Methods("DELETE").HandlerFunc(DeleteNode)
 
 	http.ListenAndServe(":8080", r)
 }
