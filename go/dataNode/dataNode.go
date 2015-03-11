@@ -28,7 +28,9 @@ func main() {
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
+	OnStartUp()
 	http.ListenAndServe(":8082", r)
+
 }
 
 func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
@@ -45,6 +47,7 @@ func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	rw.WriteHeader(http.StatusOK)
+	//rw.Header().Set(key, value)
 	rw.Write(data)
 
 }
@@ -82,7 +85,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := path.Join(basePath, id)
+	filePath := path.Join(basePath, "/Documents", id)
 
 	defer file.Close()
 
@@ -100,6 +103,14 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(rw, err)
 	}
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
+}
+
+func OnStartUp() {
+	fmt.Println("Hello, I'm here :)")
+	//url := "http://localhost:8083/hello"
+	//r := http.NewRequest("POST", url, "Hello")
+	//Send request to router for ip to primary master
+	//send 'Hello' to primary master via http post
 }
 
 //Function to get all files from another data node
