@@ -14,25 +14,26 @@ import (
 
 func main() {
 	r := mux.NewRouter()
-	file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
-	file.Methods("GET").HandlerFunc(searchDB)
+	//file := r.Path("/{faculty}/{course}/{year}/{id}").Subrouter()
+	//file.Methods("GET").HandlerFunc(GetServerIdHoldingFile)
 	//file.Methods("POST").HandlerFunc(FileCreateHandler)
 	//file.Methods("DELETE").HandlerFunc(FileDeletehandler)
+
+	file := r.Path("/{ip}/{file}").Subrouter()
+	//file.Methods("GET").HandlerFunc(AddNode)
+	file.Methods("GET").HandlerFunc(DeleteNode)
 
 	http.ListenAndServe(":8080", r)
 }
 
-func searchDB(rw http.ResponseWriter, r *http.Request) {
-
-	fmt.Print("INIT!\n")
-	//db, err := sql.Open("mysql", "ad0163:cwtfnrW5@195.178.235.60/ad0163")
+func GetServerIdHoldingFile(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 
 	checkError(err, rw)
 
 	id := mux.Vars(r)["id"]
 
-	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver on servers.id=fileserver.server_id WHERE file_id=?", id)
+	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver ON servers.id=fileserver.server_id WHERE file_id = ?", id)
 	checkError(err, rw)
 
 	for rows.Next() {
@@ -44,21 +45,68 @@ func searchDB(rw http.ResponseWriter, r *http.Request) {
 		fmt.Print("IP: ", ip)
 		fmt.Fprintf(rw, "\nIP: %s", ip)
 	}
-	//return ip as string
+	//return ip
 }
 
 func checkError(err error, rw http.ResponseWriter) {
 	if err != nil {
-		fmt.Print("Error: ", err, "<----ERROR----\n")
+		fmt.Fprintf(rw, "Error: ", err, "<----ERROR----\n")
 	}
 }
 
-//func get json of all files and folders
+func AddNode(rw http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err, rw)
 
-//func add file, file location ip
+	ip := mux.Vars(r)["ip"]
 
-//func delete file, file location
+	var id int
+	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //kolla om någon rad redan har ip-numret
 
-//func add new node
+	if err == sql.ErrNoRows { //om det inte kom tillbaka några rader
+		result, err := db.Exec("INSERT INTO servers (ip) VALUES (?)", ip) //addera server
+		checkError(err, rw)
+		affected, err := result.RowsAffected()
+		if err != nil { //om inga rader blev affectade av insättning
+			fmt.Fprintf(rw, "\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip) //något gick fel...
+		} else {
+			fmt.Fprintf(rw, "\nIP ADDED: %s AT ROW %s", ip, affected) //ADDERAD!
+		}
+	} else {
+		fmt.Fprintf(rw, "\nIP :%s COULD NOT BE ADDED, ALREADY EXIST", ip) //då adderar vi inte
+	}
+}
 
-//func delete node
+func DeleteNode(rw http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+
+	ip := mux.Vars(r)["ip"]
+
+	var id int
+	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //kolla om någon rad redan har ip-numret
+
+	if err != sql.ErrNoRows { //om det kom tillbaka en rad
+		result, err := db.Exec("DELETE FROM servers WHERE ip = ?", ip) //ta bort server
+		checkError(err, rw)
+		affected, err := result.RowsAffected()
+		if err != nil { //om inga rader blev affectade av borttagningen
+			fmt.Fprintf(rw, "\nIP :%s COULD NOT BE DELETED, UNKNOWN ERROR", ip) //något gick fel...
+		} else {
+			fmt.Fprintf(rw, "\nIP DELETED: %s AT ROW %s", ip, affected) //BORTTAGEN!
+		}
+	} else {
+		fmt.Fprintf(rw, "\nIP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
+	}
+}
+
+//func getJsonFilesAndFolders() {
+//	//func get json of all files and folders
+//}
+
+//func AddFile(fileName, ip string) {
+//	//func add file, file location ip
+//}
+
+//func DeleteFile(fileName, ip string) {
+//	//func delete file, file location
+//}
