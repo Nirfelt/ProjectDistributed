@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	//"io"
+	//"io/ioutil"
 	"net/http"
 	"github.com/gorilla/mux"
 	//"os"
-	"net/url"
+	//"net/url"
 	//"bytes"
 	"flag"
 	"log"
@@ -35,7 +35,7 @@ func main() {
 	//Declare functions
 	flag.Parse()
 	AddDataNode("localhost:8081")
-	AddDataNode("localhost:8083")
+	AddDataNode("localhost:8082")
 	//r := mux.NewRouter()
 	//update := r.Path("/update")//.Subrouter()
 	//update.Methods("POST").HandlerFunc(FileUploadHandler)
@@ -68,27 +68,28 @@ func RemoveDataNode(node string){
 }
 
 func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
-	
+	output := ""
 	for i := 0; i < len(nodes.node); i++ {
-		req := r
-		client := &http.Client{}
-		req.RequestURI = ""
-
-		u, err := url.Parse("http://" + nodes.node[i].address + "/update")
+		u := "http://" + nodes.node[i].address + "/update"
+	    req, err := http.NewRequest("POST", u, nil)
 	    if err != nil {
-	        panic(err)
-	    }   
-	    req.URL = u
-	    fmt.Println(u.String())
+			log.Fatal(err)
+			fmt.Fprintf(rw, "ERROR: Making request" + u)
+		}
+	    req.Body = r.Body
+	    req.Header = r.Header
 		req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
-		// And proxy
+
+		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Fatal(err)
+			fmt.Fprintf(rw, "ERROR: Sending request" + u)
 		}
-		resp.Write(rw)
+		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
 	}
-	
+	fmt.Println(output)
+	fmt.Fprintf(rw, output)
 }
 
 func FileGetHandler(rw http.ResponseWriter, r *http.Request) {

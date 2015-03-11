@@ -82,7 +82,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := path.Join(basePath, id)
+	filePath := path.Join(basePath, "/Documents", id)
 
 	defer file.Close()
 
