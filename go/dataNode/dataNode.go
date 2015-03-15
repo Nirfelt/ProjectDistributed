@@ -14,7 +14,8 @@ import (
 )
 
 //string that points to the devise own home folder
-var basePath string = os.Getenv("HOME")
+//var basePath string = os.Getenv("HOME")
+var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
 
 func main() {
 	r := mux.NewRouter()
@@ -29,7 +30,7 @@ func main() {
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
 	OnStartUp()
-	http.ListenAndServe(":8082", r)
+	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
 }
 
@@ -76,7 +77,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	year := r.FormValue("year")
 	id := r.FormValue("id")
 
-	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s\n", faculty, course, year)
+	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
 	// the FormFile function takes in the POST input id file
 	file, _, err := r.FormFile("file")
 
@@ -107,8 +108,24 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 
 func OnStartUp() {
 	fmt.Println("Hello, I'm here :)")
-	//url := "http://localhost:8083/hello"
-	//r := http.NewRequest("POST", url, "Hello")
+	url := "http://localhost:8083/hello"
+	r, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Printf("ERROR: Making request" + url)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(r)
+
+	if err != nil {
+		log.Fatal(err)
+		fmt.Printf("ERROR: Sending request" + url)
+	}
+	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+
+	fmt.Println(output)
+
 	//Send request to router for ip to primary master
 	//send 'Hello' to primary master via http post
 }
