@@ -14,8 +14,9 @@ import (
 )
 
 //string that points to the devise own home folder
-//var basePath string = os.Getenv("HOME")
-var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
+var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
+
+//var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
 
 func main() {
 	r := mux.NewRouter()
@@ -76,6 +77,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	course := r.FormValue("course")
 	year := r.FormValue("year")
 	id := r.FormValue("id")
+	fmt.Println(basePath)
 
 	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
 	// the FormFile function takes in the POST input id file
@@ -86,7 +88,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := path.Join(basePath, "/Documents", id)
+	filePath := path.Join(basePath, id)
 
 	defer file.Close()
 
@@ -108,7 +110,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 
 func OnStartUp() {
 	fmt.Println("Hello, I'm here :)")
-	url := "http://localhost:8083/hello"
+	url := "http://localhost:9090/hello"
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		log.Fatal(err)
