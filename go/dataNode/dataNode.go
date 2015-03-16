@@ -77,7 +77,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	course := r.FormValue("course")
 	year := r.FormValue("year")
 	id := r.FormValue("id")
-	fmt.Println(basePath)
+	fmt.Println("Thanks for the request")
 
 	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
 	// the FormFile function takes in the POST input id file
