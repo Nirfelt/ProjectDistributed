@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"github.com/gorilla/mux"
-	"net/http"
-	"io/ioutil"
 	"bytes"
 	"flag"
+	"fmt"
+	"github.com/gorilla/mux"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"strings"
 	"unicode"
 )
@@ -33,6 +33,7 @@ func main() {
 	flag.Parse()
 	AddDataNode("localhost:8081")
 	AddDataNode("localhost:8082")
+	AddDataNode("localhost:8083")
 	r := mux.NewRouter()
 	update := r.Path("/update")
 	update.Methods("POST").HandlerFunc(proxyHandlerFunc)
