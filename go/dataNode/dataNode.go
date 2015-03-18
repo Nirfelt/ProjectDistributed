@@ -7,14 +7,17 @@ import (
 	"io/ioutil"
 	"log"
 	//"mime/multipart"
-	//"net"
+	//"bytes"
+	"net"
 	"net/http"
 	"os"
 	"path"
+	//"strings"
 )
 
 //string that points to the devise own home folder
 var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
+var routerAddress string = "localhost:9090"
 
 //var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
 
@@ -30,7 +33,7 @@ func main() {
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
-	OnStartUp()
+	NotifyMaster()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
 }
@@ -108,9 +111,37 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
 }
 
-func OnStartUp() {
-	fmt.Println("Hello, I'm here :)")
-	url := "http://localhost:9090/hello"
+func OnStartUp() string {
+	fmt.Println("Who is primary master?")
+
+	url := "http://" + routerAddress + "/getprimary"
+
+	resp, err := http.Get(url)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	return body
+}
+
+func NotifyMaster() {
+	masterAddress := OnStartUp()
+
+	//Test code to get own address
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(addrs)
+
+	nodeAddress := "localhost:" + os.Getenv("PORT")
+	fmt.Println(nodeAddress)
+	url := "http://" + masterAddress + "/handshake/" + nodeAddress
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -127,9 +158,6 @@ func OnStartUp() {
 	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
 
 	fmt.Println(output)
-
-	//Send request to router for ip to primary master
-	//send 'Hello' to primary master via http post
 }
 
 //Function to get all files from another data node
@@ -137,3 +165,5 @@ func OnStartUp() {
 //Function when a data node has been down and starts over it contacts web server to get ip to master to contact.
 
 //Function to contact master to get an ip to another data node
+
+//Function to tell master when a file has been saved

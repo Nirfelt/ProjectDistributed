@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"unicode"
 )
@@ -28,16 +29,21 @@ var (
 	logp   = flag.Bool("log", false, "enable logging")
 )
 
+var routerAddress string = "localhost:9090"
+
 func main() {
 	//Declare functions
 	flag.Parse()
-	AddDataNode("localhost:8081")
-	AddDataNode("localhost:8082")
-	AddDataNode("localhost:8083")
+
 	r := mux.NewRouter()
 	update := r.Path("/update")
-	update.Methods("POST").HandlerFunc(proxyHandlerFunc)
-	http.ListenAndServe(":8080", r)
+	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
+	handshake := r.Path("/handshake/{nodeAddress}")
+	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+
+	NotifyRouter()
+
+	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
 
 func AddDataNode(address string) {
@@ -59,7 +65,7 @@ func RemoveDataNode(node string) {
 	//Update DB
 }
 
-func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
+func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	output := ""
 	body, _ := ioutil.ReadAll(r.Body)
 
@@ -87,13 +93,11 @@ func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, output)
 }
 
-func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
-	faculty := mux.Vars(r)["faculty"]
-	course := mux.Vars(r)["course"]
-	year := mux.Vars(r)["year"]
-	id := mux.Vars(r)["id"]
+func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
+	handshake := mux.Vars(r)["nodeAddress"]
+	AddDataNode(handshake)
 
-	fmt.Fprintf(rw, "Get file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
+	fmt.Println("Handshake: " + handshake)
 }
 
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
@@ -103,6 +107,30 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	fmt.Fprintf(rw, "Deleted file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
+}
+
+func NotifyRouter() {
+	masterAddress := "localhost:" + os.Getenv("PORT")
+
+	url := "http://" + routerAddress + "/handshake/" + masterAddress
+	r, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Printf("ERROR: Making request" + url)
+	}
+
+	//r.Body(nodeAddress)
+
+	client := &http.Client{}
+	resp, err := client.Do(r)
+
+	if err != nil {
+		log.Fatal(err)
+		fmt.Printf("ERROR: Sending request" + url)
+	}
+	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+
+	fmt.Println(output)
 }
 
 //func get datanode ip
