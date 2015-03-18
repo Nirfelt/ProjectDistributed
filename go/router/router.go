@@ -77,7 +77,31 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
+	if len(masters.master) == 0 {
+		fmt.Println(rw, "ERROR: No registered masters")
+		return
+	}
+	id := r.FormValue("id")
+	output := ""
+	u := "http://" + masters.master[0].address + "/delete/" + id
 
+	req, err := http.NewRequest("POST", u, nil)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println(rw, "ERROR: Making request"+u)
+	}
+	req.Header = r.Header
+	req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
+	
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println(rw, "ERROR: Sending request"+u)
+	}
+	output = u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto
+	fmt.Println(output)
+	fmt.Fprintf(rw, output)
 }
 
 func AddMaster(address string) {
