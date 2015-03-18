@@ -11,9 +11,6 @@ import (
 	"unicode"
 )
 
-//string that points to the devise own home folder
-//var basePath string = os.Getenv("HOME")
-
 type masterlist struct {
 	master []master
 }
@@ -33,6 +30,10 @@ func main() {
 	getPrimary.Methods("GET").HandlerFunc(GetPrimaryHandler)
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+	getfile := r.Path("/getfile/{id}")
+	getfile.Methods("GET").HandlerFunc(GetFileHandler)
+	deletefile := r.Path("/deletefile/{id}")
+	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
 
 	http.ListenAndServe(":9090", r)
 
@@ -69,6 +70,14 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
 	master := []byte(masters.master[0].address)
 	rw.Write(master)
+}
+
+func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
+
+}
+
+func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
+
 }
 
 func AddMaster(address string) {
