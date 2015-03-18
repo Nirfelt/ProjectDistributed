@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
@@ -75,7 +76,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	fmt.Println("Thanks for the request")
 
-	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
+	//fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
 	// the FormFile function takes in the POST input id file
 	file, _, err := r.FormFile("file")
 
@@ -118,7 +119,9 @@ func OnStartUp() string {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
-	return body
+	b := bytes.NewBuffer(body)
+
+	return b.String()
 }
 
 func NotifyMaster() {
