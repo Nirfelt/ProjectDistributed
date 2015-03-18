@@ -31,13 +31,13 @@ var (
 func main() {
 	//Declare functions
 	flag.Parse()
-	AddDataNode("localhost:8081")
-	AddDataNode("localhost:8082")
-	AddDataNode("localhost:8083")
+	//AddDataNode("localhost:8081")
+	//AddDataNode("localhost:8082")
+	//AddDataNode("localhost:8083")
 	r := mux.NewRouter()
 	update := r.Path("/update")
 	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
-	handshake := r.Path("/handshake")
+	handshake := r.Path("/handshake/{nodeAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 	http.ListenAndServe(":8080", r)
 }
@@ -90,10 +90,10 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 }
 
 func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
-	handshake := mux.Vars(r)["handshake"]
+	handshake := mux.Vars(r)["nodeAddress"]
 	AddDataNode(handshake)
 
-	fmt.Println(rw, "Handshake: " + handshake)
+	fmt.Println("Handshake: " + handshake)
 }
 
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {

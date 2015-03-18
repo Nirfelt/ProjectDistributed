@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strings"
+	//"strings"
 )
 
 //string that points to the devise own home folder
@@ -147,15 +147,16 @@ func NotifyMaster() {
 
 	fmt.Println(addrs)
 
-	nodeAddress := "http://localhost:" + os.Getenv("PORT")
-	url := "http://" + masterAddress + "/handshake"
+	nodeAddress := "localhost:" + os.Getenv("PORT")
+	fmt.Println(nodeAddress)
+	url := "http://" + masterAddress + "/handshake/" + nodeAddress
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		log.Fatal(err)
 		fmt.Printf("ERROR: Making request" + url)
 	}
 
-	r.Body(nodeAddress)
+	//r.Body(nodeAddress)
 
 	client := &http.Client{}
 	resp, err := client.Do(r)
