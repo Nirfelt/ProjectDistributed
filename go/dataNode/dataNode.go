@@ -6,20 +6,15 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	//"mime/multipart"
-	//"bytes"
 	"net"
 	"net/http"
 	"os"
 	"path"
-	//"strings"
 )
 
 //string that points to the devise own home folder
 var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
 var routerAddress string = "localhost:9090"
-
-//var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
 
 func main() {
 	r := mux.NewRouter()
@@ -34,6 +29,7 @@ func main() {
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
 	NotifyMaster()
+
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
 }
@@ -76,9 +72,6 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	//id := mux.Vars(r)["id"]
-	faculty := r.FormValue("faculty")
-	course := r.FormValue("course")
-	year := r.FormValue("year")
 	id := r.FormValue("id")
 	fmt.Println("Thanks for the request")
 
@@ -161,8 +154,6 @@ func NotifyMaster() {
 }
 
 //Function to get all files from another data node
-
-//Function when a data node has been down and starts over it contacts web server to get ip to master to contact.
 
 //Function to contact master to get an ip to another data node
 
