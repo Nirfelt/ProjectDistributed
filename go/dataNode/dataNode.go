@@ -55,6 +55,7 @@ func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
+	fmt.Println("data node ok")
 	id := mux.Vars(r)["id"]
 	//id := r.FormValue("id")
 

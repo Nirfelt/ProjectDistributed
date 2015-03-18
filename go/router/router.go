@@ -30,9 +30,9 @@ func main() {
 	getPrimary.Methods("GET").HandlerFunc(GetPrimaryHandler)
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
-	getfile := r.Path("/getfile/{id}")
+	getfile := r.Path("/getfile")
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
-	deletefile := r.Path("/deletefile/{id}")
+	deletefile := r.Path("/deletefile")
 	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
 
 	http.ListenAndServe(":9090", r)
@@ -77,6 +77,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
+	fmt.Println("router ok")
 	if len(masters.master) == 0 {
 		fmt.Println(rw, "ERROR: No registered masters")
 		return
@@ -85,14 +86,14 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 	output := ""
 	u := "http://" + masters.master[0].address + "/delete/" + id
 
-	req, err := http.NewRequest("POST", u, nil)
+	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
 		log.Fatal(err)
 		fmt.Println(rw, "ERROR: Making request"+u)
 	}
 	req.Header = r.Header
 	req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
-	
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

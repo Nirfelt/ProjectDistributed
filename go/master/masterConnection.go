@@ -40,8 +40,8 @@ func main() {
 	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 	handshake := r.Path("/handshake/{nodeAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
-	delete := r.Path("/delete/{id}")
-	delete.Methods("DELETE").HandlerFunc(FileDeleteHandler)
+	deleteFile := r.Path("/delete/{id}")
+	deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 	NotifyRouter()
 
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
@@ -103,6 +103,7 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 
 //Func for multicasting id of file to delete to nodes
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
+	fmt.Println("master ok")
 	id := mux.Vars(r)["id"] //Get file id from request path
 	output := ""
 
@@ -110,7 +111,7 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 	for i := 0; i < len(nodes.node); i++ {
 		u := "http://" + nodes.node[i].address + "/delete/" + id //Specific url for every node
 
-		req, err := http.NewRequest("POST", u, nil) //Create new request
+		req, err := http.NewRequest("DELETE", u, nil) //Create new request
 		if err != nil {
 			log.Fatal(err)
 			fmt.Println(rw, "ERROR: Making request"+u)
