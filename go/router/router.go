@@ -11,9 +11,6 @@ import (
 	"unicode"
 )
 
-//string that points to the devise own home folder
-//var basePath string = os.Getenv("HOME")
-
 type masterlist struct {
 	master []master
 }
@@ -33,6 +30,10 @@ func main() {
 	getPrimary.Methods("GET").HandlerFunc(GetPrimaryHandler)
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+	getfile := r.Path("/getfile/{id}")
+	getfile.Methods("GET").HandlerFunc(GetFileHandler)
+	deletefile := r.Path("/deletefile/{id}")
+	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
 
 	http.ListenAndServe(":9090", r)
 
@@ -69,6 +70,38 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
 	master := []byte(masters.master[0].address)
 	rw.Write(master)
+}
+
+func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
+
+}
+
+func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
+	if len(masters.master) == 0 {
+		fmt.Println(rw, "ERROR: No registered masters")
+		return
+	}
+	id := r.FormValue("id")
+	output := ""
+	u := "http://" + masters.master[0].address + "/delete/" + id
+
+	req, err := http.NewRequest("POST", u, nil)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println(rw, "ERROR: Making request"+u)
+	}
+	req.Header = r.Header
+	req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
+	
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println(rw, "ERROR: Sending request"+u)
+	}
+	output = u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto
+	fmt.Println(output)
+	fmt.Fprintf(rw, output)
 }
 
 func AddMaster(address string) {

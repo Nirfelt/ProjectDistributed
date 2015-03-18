@@ -40,7 +40,8 @@ func main() {
 	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 	handshake := r.Path("/handshake/{nodeAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
-
+	delete := r.Path("/delete/{id}")
+	delete.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 	NotifyRouter()
 
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
@@ -100,13 +101,33 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("Handshake: " + handshake)
 }
 
+//Func for multicasting id of file to delete to nodes
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
-	faculty := mux.Vars(r)["faculty"]
-	course := mux.Vars(r)["course"]
-	year := mux.Vars(r)["year"]
-	id := mux.Vars(r)["id"]
+	id := mux.Vars(r)["id"] //Get file id from request path
+	output := ""
 
-	fmt.Fprintf(rw, "Deleted file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
+	// Loop over all data nodes
+	for i := 0; i < len(nodes.node); i++ {
+		u := "http://" + nodes.node[i].address + "/delete/" + id //Specific url for every node
+
+		req, err := http.NewRequest("POST", u, nil) //Create new request
+		if err != nil {
+			log.Fatal(err)
+			fmt.Println(rw, "ERROR: Making request"+u)
+		}
+		req.Header = r.Header
+		req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
+
+		client := &http.Client{}
+		resp, err := client.Do(req) //Send request, get response
+		if err != nil {
+			log.Fatal(err)
+			fmt.Println(rw, "ERROR: Sending request"+u)
+		}
+		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n" //Output string
+	}
+	fmt.Println(output)
+	fmt.Fprintf(rw, output)
 }
 
 func NotifyRouter() {
