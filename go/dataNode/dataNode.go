@@ -17,6 +17,7 @@ import (
 
 //string that points to the devise own home folder
 var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
+var routerAddress string = "localhost:9090"
 
 //var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
 
@@ -112,28 +113,19 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 
 func OnStartUp() string {
 	fmt.Println("Who is primary master?")
-	//url := "http://" + localhost:9090"/hello"
-	//Fix GET request
-	//r, err := http.NewRequest("POST", url, nil)
-	//if err != nil {
-	//	log.Fatal(err)
-	//	fmt.Printf("ERROR: Making request" + url)
-	//}
 
-	//client := &http.Client{}
-	//resp, err := client.Do(r)
+	url := "http://" + routerAddress + "/getprimary"
 
-	//if err != nil {
-	//	log.Fatal(err)
-	//	fmt.Printf("ERROR: Sending request" + url)
-	//}
-	//output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+	resp, err := http.Get(url)
 
-	//fmt.Println(output)
-	return "localhost:8080"
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	//Send request to router for ip to primary master
-	//send 'Hello' to primary master via http post
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	return body
 }
 
 func NotifyMaster() {
@@ -155,8 +147,6 @@ func NotifyMaster() {
 		log.Fatal(err)
 		fmt.Printf("ERROR: Making request" + url)
 	}
-
-	//r.Body(nodeAddress)
 
 	client := &http.Client{}
 	resp, err := client.Do(r)

@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gorilla/mux"
-	"net/http"
-	"bytes"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"strings"
 	"unicode"
 )
@@ -31,6 +31,8 @@ func main() {
 	update.Methods("POST").HandlerFunc(UploadHandler)
 	getPrimary := r.Path("/getprimary")
 	getPrimary.Methods("GET").HandlerFunc(GetPrimaryHandler)
+	handshake := r.Path("/handshake/{masterAddress}")
+	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
 	http.ListenAndServe(":9090", r)
 
@@ -64,7 +66,7 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, output)
 }
 
-func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request){
+func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
 	master := []byte(masters.master[0].address)
 	rw.Write(master)
 }
@@ -84,4 +86,11 @@ func RemoveMaster(address string) {
 			masters.master = masters.master[:len(masters.master)-1]
 		}
 	}
+}
+
+func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
+	handshake := mux.Vars(r)["masterAddress"]
+	AddMaster(handshake)
+
+	fmt.Println("Handshake: " + handshake)
 }
