@@ -7,10 +7,12 @@ import (
 	"io/ioutil"
 	"log"
 	//"mime/multipart"
-	//"net"
+	//"bytes"
+	"net"
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 //string that points to the devise own home folder
@@ -30,7 +32,7 @@ func main() {
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
-	OnStartUp()
+	NotifyMaster()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
 }
@@ -108,14 +110,52 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
 }
 
-func OnStartUp() {
-	fmt.Println("Hello, I'm here :)")
-	url := "http://localhost:9090/hello"
+func OnStartUp() string {
+	fmt.Println("Who is primary master?")
+	//url := "http://" + localhost:9090"/hello"
+	//Fix GET request
+	//r, err := http.NewRequest("POST", url, nil)
+	//if err != nil {
+	//	log.Fatal(err)
+	//	fmt.Printf("ERROR: Making request" + url)
+	//}
+
+	//client := &http.Client{}
+	//resp, err := client.Do(r)
+
+	//if err != nil {
+	//	log.Fatal(err)
+	//	fmt.Printf("ERROR: Sending request" + url)
+	//}
+	//output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+
+	//fmt.Println(output)
+	return "localhost:8080"
+
+	//Send request to router for ip to primary master
+	//send 'Hello' to primary master via http post
+}
+
+func NotifyMaster() {
+	masterAddress := OnStartUp()
+
+	//Test code to get own address
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(addrs)
+
+	nodeAddress := "http://localhost:" + os.Getenv("PORT")
+	url := "http://" + masterAddress + "/handshake"
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		log.Fatal(err)
 		fmt.Printf("ERROR: Making request" + url)
 	}
+
+	r.Body(nodeAddress)
 
 	client := &http.Client{}
 	resp, err := client.Do(r)
@@ -127,9 +167,6 @@ func OnStartUp() {
 	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
 
 	fmt.Println(output)
-
-	//Send request to router for ip to primary master
-	//send 'Hello' to primary master via http post
 }
 
 //Function to get all files from another data node
@@ -137,3 +174,5 @@ func OnStartUp() {
 //Function when a data node has been down and starts over it contacts web server to get ip to master to contact.
 
 //Function to contact master to get an ip to another data node
+
+//Function to tell master when a file has been saved
