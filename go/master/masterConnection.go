@@ -36,7 +36,9 @@ func main() {
 	AddDataNode("localhost:8083")
 	r := mux.NewRouter()
 	update := r.Path("/update")
-	update.Methods("POST").HandlerFunc(proxyHandlerFunc)
+	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
+	handshake := r.Path("/handshake")
+	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 	http.ListenAndServe(":8080", r)
 }
 
@@ -59,7 +61,7 @@ func RemoveDataNode(node string) {
 	//Update DB
 }
 
-func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
+func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	output := ""
 	body, _ := ioutil.ReadAll(r.Body)
 
@@ -87,13 +89,11 @@ func proxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, output)
 }
 
-func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
-	faculty := mux.Vars(r)["faculty"]
-	course := mux.Vars(r)["course"]
-	year := mux.Vars(r)["year"]
-	id := mux.Vars(r)["id"]
+func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
+	handshake := mux.Vars(r)["handshake"]
+	AddDataNode(handshake)
 
-	fmt.Fprintf(rw, "Get file with id: %s, faculty: %s, course: %s, year: %s", id, faculty, course, year)
+	fmt.Println(rw, "Handshake: " + handshake)
 }
 
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
