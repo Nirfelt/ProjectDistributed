@@ -1,25 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
 	"log"
-	//"mime/multipart"
-	//"bytes"
 	"net"
 	"net/http"
 	"os"
 	"path"
-	//"strings"
 )
 
 //string that points to the devise own home folder
 var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
 var routerAddress string = "localhost:9090"
-
-//var basePath string = "/Users/annikamagnusson/Documents/" + os.Getenv("PORT")
 
 func main() {
 	r := mux.NewRouter()
@@ -34,6 +30,7 @@ func main() {
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
 	NotifyMaster()
+
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
 }
@@ -58,6 +55,7 @@ func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
+	fmt.Println("data node ok")
 	id := mux.Vars(r)["id"]
 	//id := r.FormValue("id")
 
@@ -76,13 +74,10 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	//id := mux.Vars(r)["id"]
-	faculty := r.FormValue("faculty")
-	course := r.FormValue("course")
-	year := r.FormValue("year")
 	id := r.FormValue("id")
 	fmt.Println("Thanks for the request")
 
-	fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
+	//fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
 	// the FormFile function takes in the POST input id file
 	file, _, err := r.FormFile("file")
 
@@ -125,7 +120,9 @@ func OnStartUp() string {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
-	return body
+	b := bytes.NewBuffer(body)
+
+	return b.String()
 }
 
 func NotifyMaster() {
@@ -161,8 +158,6 @@ func NotifyMaster() {
 }
 
 //Function to get all files from another data node
-
-//Function when a data node has been down and starts over it contacts web server to get ip to master to contact.
 
 //Function to contact master to get an ip to another data node
 
