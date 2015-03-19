@@ -16,8 +16,11 @@ import (
 
 func main() {
 	r := mux.NewRouter()
-	get_server := r.Path("/get_server/{faculty}/{course}/{year}/{id}").Subrouter()
+	get_server := r.Path("/get_server/{id}").Subrouter()
 	get_server.Methods("GET").HandlerFunc(GetServerIdHoldingFile)
+
+	get_filename := r.Path("/get_filename/{id}").Subrouter()
+	get_filename.Methods("GET").HandlerFunc(GetFileName)
 
 	add_server := r.Path("/add_server/{ip}").Subrouter()
 	add_server.Methods("PUT").HandlerFunc(AddNode)
@@ -44,16 +47,19 @@ func GetServerIdHoldingFile(rw http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver ON servers.id=fileserver.server_id WHERE file_id = ?", id)
 	checkError(err, rw)
 
+	var all_ip []byte
+
 	for rows.Next() {
 		var ip string
 
 		err = rows.Scan(&ip)
 		checkError(err, rw)
 
-		fmt.Print("IP: ", ip)
-		fmt.Fprintf(rw, "\nIP: %s", ip)
+		jsonStr, _ := json.Marshal(ip)
+
+		all_ip = append(all_ip, jsonStr...)
 	}
-	//return ip
+	rw.Write(all_ip)
 }
 
 func checkError(err error, rw http.ResponseWriter) {
@@ -62,16 +68,26 @@ func checkError(err error, rw http.ResponseWriter) {
 	}
 }
 
-func getFileName(id int) {
+func checkError2(err error) {
+	if err != nil {
+		fmt.Println("Error: ", err, "<----ERROR----\n")
+	}
+}
+
+func GetFileName(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 
-	var name string
-	err = db.QueryRow("SELECT * FROM files WHERE if = ?", id).Scan(&name) //kolla om någon rad har id
+	var file File
+
+	file.ID = mux.Vars(r)["id"]
+
+	err = db.QueryRow("SELECT name, year, course, faculty FROM files WHERE id = ?", file.ID).Scan(&file.Name, &file.Year, &file.Course, &file.Faculty) //kolla om någon rad har id
 
 	if err != sql.ErrNoRows { //om det kom tillbaka en rad
-		fmt.Printf("%s\n", name)
+		jsonStr, _ := json.Marshal(file)
+		rw.Write(jsonStr)
+		getJsonFilesAndFolders()
 	}
-
 }
 
 func AddNode(rw http.ResponseWriter, r *http.Request) {
@@ -120,29 +136,53 @@ func DeleteNode(rw http.ResponseWriter, r *http.Request) {
 }
 
 type File struct {
-	id      int
-	faculty string
-	course  string
-	year    int
-	name    string
+	Faculty string `json:"faculty"`
+	Course  string `json:"course"`
+	Year    string `json:"year"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
 }
 
-func getJsonFilesAndFolders(rw http.ResponseWriter) {
+//WIP
+func getJsonFilesAndFolders() {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 
 	rows, err := db.Query("SELECT * FROM files")
-	checkError(err, rw)
+
+	checkError2(err)
+
+	var all_json []byte
 
 	for rows.Next() {
 		file := new(File)
 
-		err = rows.Scan(&file.id, &file.faculty, &file.course, &file.year, &file.name)
-		checkError(err, rw)
+		err = rows.Scan(&file.ID, &file.Faculty, &file.Course, &file.Year, &file.Name)
+
+		checkError2(err)
 
 		jsonString, _ := json.Marshal(file)
 
-		fmt.Println(string(jsonString))
+		all_json = append(all_json, jsonString...)
 	}
+
+	//JAVASCRIPT exempel.....
+	// var keys = Object.keys(dataMap)
+
+	// for _, key := range keys {
+	//         var innerJson []byte
+	//         innerJson["name"] = keys[key]
+	//         var innerMap = dataMap[keys[key]]
+
+	//         if innerMap instanceof Array {
+	//             innerJson["size"] = innerMap[0]
+	//         } else if innerMap instanceof Object {
+
+	//             var child = processHirarchiachalData(innerMap)
+	//             innerJson["children"] = child
+	//         }
+	//         json.push(innerJson)
+
+	// }
 }
 
 func AddFile(rw http.ResponseWriter, r *http.Request) {
@@ -161,8 +201,6 @@ func AddFile(rw http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintf(rw, "\nFILE ADDED: %s AT ROW %s", name, affected) //ADDERAD!
 	}
-
-	getJsonFilesAndFolders(rw)
 
 	//ATT GÖRA: ADDERA FIL TILL NOD!
 }
