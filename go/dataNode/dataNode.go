@@ -16,6 +16,8 @@ import (
 //string that points to the devise own home folder
 var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
 var routerAddress string = "localhost:9090"
+var sisterNode1 string
+var sisterNode2 string
 
 func main() {
 	r := mux.NewRouter()
@@ -135,6 +137,7 @@ func NotifyMaster() {
 	}
 
 	fmt.Println(addrs)
+	//end of test code
 
 	nodeAddress := "localhost:" + os.Getenv("PORT")
 	fmt.Println(nodeAddress)
@@ -155,10 +158,31 @@ func NotifyMaster() {
 	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
 
 	fmt.Println(output)
+
+	sisters := GetNodeIP(masterAddress)
+	fmt.Println(sisters)
 }
 
 //Function to get all files from another data node
 
 //Function to contact master to get an ip to another data node
+func GetNodeIP(masterIP string) string {
+	url := "http://" + masterIP + "/getconnectednod/" + os.Getenv("PORT")
+
+	resp, err := http.Get(url)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	b := bytes.NewBuffer(body)
+
+	return b.String()
+}
+
+//Add timestamp on datanodes
 
 //Function to tell master when a file has been saved
