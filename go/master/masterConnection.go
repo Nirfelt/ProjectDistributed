@@ -200,17 +200,37 @@ func AddDataNode(ip string) {
 	}
 }
 
-func RemoveDataNode(node string) {
+func RemoveDataNode(ip string) {
 	if len(nodes.node) == 0 {
 		return
 	}
 	for i := range nodes.node {
-		if nodes.node[i].address == node {
+		if nodes.node[i].address == ip {
 			nodes.node[i] = nodes.node[len(nodes.node)-1]
 			nodes.node = nodes.node[:len(nodes.node)-1]
 		}
 	}
 	//Update DB
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa") //Open DB connection
+	if err != nil {
+		fmt.Println("ERROR: Open DB")
+	}
+	var id int
+	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //check if any row has the ip
+	if err != sql.ErrNoRows { //If a row is returned
+		result, err := db.Exec("DELETE FROM servers WHERE ip = ?", ip) //Remove server server
+		if err != nil {
+			fmt.Println("\nIP :%s DELETE FAILED", ip)
+		}
+		affected, err := result.RowsAffected()
+		if err != nil { //If no rows were affected
+			fmt.Println("\nIP :%s COULD NOT BE DELETED, UNKNOWN ERROR", ip)
+		} else {
+			fmt.Println("\nIP DELETED: %s AT ROW %s", ip, affected) //REMOVED!
+		}
+	} else {
+		fmt.Println("\nIP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
+	}
 }
 
 //func get datanode ip
