@@ -11,7 +11,10 @@ import (
 	"os"
 	"strings"
 	"unicode"
-	"encoding/json"
+	"database/sql"
+	//"database/sql/driver"
+	"math/rand"
+	//_ "github.com/go-sql-driver/mysql"
 )
 
 type dataNodes struct {
@@ -56,34 +59,44 @@ func main() {
 
 
 func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
-	//Get dataNode address from masterDB
+	//Connect to DB
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	if err != nil {
+		fmt.Println("ERROR: Opening DB")
+	}
+	//Get dataNode address from DB
 	id := mux.Vars(r)["id"]
-	resp, err := http.Get("http://" + masterDB + "/get_server/" + id)
+
+	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver ON servers.id=fileserver.server_id WHERE file_id = ?", id)
 	if err != nil {
-		fmt.Println("ERROR: Sending request"+masterDB)
+		fmt.Println("ERROR: SQL statement DB")
 	}
-	//Handle response
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	var data []string
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		fmt.Println("ERROR: Unmarshall json")
+	//Loop all ip to a list
+	var all_ip []string
+	for rows.Next() {
+		var ip string
+
+		err = rows.Scan(&ip)
+		if err != nil {
+		fmt.Println("ERROR: row.Scan")
+		}
+
+		all_ip = append(all_ip, ip)
 	}
-	for i := 0; i < len(data); i++ {
-		fmt.Println(data[i])
-	}
+	//Return random ip from list
+	rw.Write([]byte(all_ip[rand.Intn(len(all_ip))]))
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	output := ""
+	//Read body
 	body, _ := ioutil.ReadAll(r.Body)
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
 		u := "http://" + nodes.node[i].address + "/update"
 		reader := bytes.NewReader(body)
-
+		//Create new request
 		req, err := http.NewRequest("POST", u, ioutil.NopCloser(reader))
 		if err != nil {
 			fmt.Println(rw, "ERROR: Making request"+u)
@@ -99,6 +112,7 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
+	//Add to DB
 }
 
 //Func for multicasting id of file to delete to nodes
@@ -157,22 +171,33 @@ func NotifyRouter() {
 	fmt.Println(output)
 }
 
-func AddDataNode(address string) {
-	node := node{address: address, ok: true}
+//Adding a dataNode to master list and DB
+func AddDataNode(ip string) {
+	node := node{address: ip, ok: true}
 	nodes.node = append(nodes.node, node)
-	//update DB
-	u := "http://" + masterDB + "/add_server/" + address
+	//Connect to DB
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	if err != nil {
+		fmt.Printf("ERROR: Open DB")
+	}
+	//Making DB insert
+	var id int
+	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //check if ip exists
 
-	req, err := http.NewRequest("PUT", u, nil) //Create new request
-	if err != nil {
-		fmt.Println("ERROR: Making request"+u)
+	if err == sql.ErrNoRows { //Check return rows
+		result, err := db.Exec("INSERT INTO servers (ip) VALUES (?)", ip) //add server
+		if err != nil {
+			fmt.Println("\nIP :%s INSERT FAILED", ip)
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			fmt.Println("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip)
+		} else {
+			fmt.Println("\nIP ADDED: %s AT ROW %s", ip, affected) //ADDED!
+		}
+	} else {
+		fmt.Println("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST", ip)
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("ERROR: Sending request"+u)
-	}
-	fmt.Println(u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n")
 }
 
 func RemoveDataNode(node string) {
@@ -186,18 +211,6 @@ func RemoveDataNode(node string) {
 		}
 	}
 	//Update DB
-	u := "http://" + masterDB + "/delete_server/" + node
-
-	req, err := http.NewRequest("DELETE", u, nil) //Create new request
-	if err != nil {
-		fmt.Println("ERROR: Making request"+u)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("ERROR: Sending request"+u)
-	}
-	fmt.Println(u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n")
 }
 
 //func get datanode ip
