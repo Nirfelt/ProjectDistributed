@@ -37,9 +37,21 @@ func main() {
 	http.ListenAndServe(":8080", r)
 }
 
+func checkError(err error, rw http.ResponseWriter) {
+	if err != nil {
+		fmt.Fprintf(rw, "Error: ", err, "<----ERROR----\n")
+	}
+}
+
+func checkError2(err error) {
+	if err != nil {
+		fmt.Println("Error: ", err, "<----ERROR----\n")
+	}
+}
+
+//Returnerar ip på alla serverar som håller en fil med id (input)
 func GetServerIdHoldingFile(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
-
 	checkError(err, rw)
 
 	id := mux.Vars(r)["id"]
@@ -62,26 +74,17 @@ func GetServerIdHoldingFile(rw http.ResponseWriter, r *http.Request) {
 	rw.Write(all_ip)
 }
 
-func checkError(err error, rw http.ResponseWriter) {
-	if err != nil {
-		fmt.Fprintf(rw, "Error: ", err, "<----ERROR----\n")
-	}
-}
-
-func checkError2(err error) {
-	if err != nil {
-		fmt.Println("Error: ", err, "<----ERROR----\n")
-	}
-}
-
-func GetFileName(rw http.ResponseWriter, r *http.Request) {
+//returnerar all info om filen, id, faculty, course, year och name från id (input)
+func GetFileInfo(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err, rw)
 
 	var file File
 
 	file.ID = mux.Vars(r)["id"]
 
 	err = db.QueryRow("SELECT name, year, course, faculty FROM files WHERE id = ?", file.ID).Scan(&file.Name, &file.Year, &file.Course, &file.Faculty) //kolla om någon rad har id
+	checkError(err, rw)
 
 	if err != sql.ErrNoRows { //om det kom tillbaka en rad
 		jsonStr, _ := json.Marshal(file)
@@ -90,6 +93,7 @@ func GetFileName(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Adderar en nod med ip (input)
 func AddNode(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 	checkError(err, rw)
@@ -98,6 +102,7 @@ func AddNode(rw http.ResponseWriter, r *http.Request) {
 
 	var id int
 	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //kolla om någon rad redan har ip-numret
+	checkError(err, rw)
 
 	if err == sql.ErrNoRows { //om det inte kom tillbaka några rader
 		result, err := db.Exec("INSERT INTO servers (ip) VALUES (?)", ip) //addera server
@@ -113,13 +118,16 @@ func AddNode(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Tar bort noden med ip (input)
 func DeleteNode(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err, rw)
 
 	ip := mux.Vars(r)["ip"]
 
 	var id int
 	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //kolla om någon rad har ip-numret
+	checkError(err, rw)
 
 	if err != sql.ErrNoRows { //om det kom tillbaka en rad
 		result, err := db.Exec("DELETE FROM servers WHERE ip = ?", ip) //ta bort server
@@ -146,9 +154,9 @@ type File struct {
 //WIP
 func getJsonFilesAndFolders() {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError2(err)
 
 	rows, err := db.Query("SELECT * FROM files")
-
 	checkError2(err)
 
 	var all_json []byte
@@ -185,8 +193,10 @@ func getJsonFilesAndFolders() {
 	// }
 }
 
+//Adderar fil med name, year, course och faculty från input
 func AddFile(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err, rw)
 
 	name := mux.Vars(r)["name"]
 	year := mux.Vars(r)["year"]
@@ -195,6 +205,7 @@ func AddFile(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := db.Exec("INSERT INTO files (faculty, course, year, name) VALUES (?, ?, ?, ?)", faculty, course, year, name) //addera fil
 	checkError(err, rw)
+
 	affected, err := result.RowsAffected()
 	if err != nil { //om inga rader blev affectade av insättning
 		fmt.Fprintf(rw, "\nFILE :%s COULD NOT BE ADDED, UNKNOWN ERROR", name) //något gick fel...
@@ -205,16 +216,20 @@ func AddFile(rw http.ResponseWriter, r *http.Request) {
 	//ATT GÖRA: ADDERA FIL TILL NOD!
 }
 
+//Adderar existerande fil till existerande nod
 func AddFileToNode() {
 
 }
 
+//Tar bort fil med id (input)
 func DeleteFile(rw http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err, rw)
 
 	id := mux.Vars(r)["id"]
 
 	err = db.QueryRow("SELECT * FROM files WHERE id = ?", id).Scan(&id) //kolla om någon rad har fil id
+	checkError(err, rw)
 
 	if err != sql.ErrNoRows { //om det kom tillbaka en rad
 		result, err := db.Exec("DELETE FROM files WHERE id = ?", id) //ta bort fil
