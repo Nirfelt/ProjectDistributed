@@ -7,10 +7,10 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path"
+	//"strings"
 )
 
 //string that points to the devise own home folder
@@ -130,17 +130,7 @@ func OnStartUp() string {
 func NotifyMaster() {
 	masterAddress := OnStartUp()
 
-	//Test code to get own address
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(addrs)
-	//end of test code
-
 	nodeAddress := "localhost:" + os.Getenv("PORT")
-	fmt.Println(nodeAddress)
 	url := "http://" + masterAddress + "/handshake/" + nodeAddress
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -159,8 +149,10 @@ func NotifyMaster() {
 
 	fmt.Println(output)
 
-	sisters := GetNodeIP(masterAddress)
-	fmt.Println(sisters)
+	//sisters := GetNodeIP(masterAddress)
+	//s := strings.Split("8081,8082", ",")
+	//fmt.Println(s)
+	//fmt.Println(sisters)
 }
 
 //Function to get all files from another data node
