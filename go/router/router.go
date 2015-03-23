@@ -125,22 +125,24 @@ func RemoveMaster(address string) {
 
 func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	handshake := mux.Vars(r)["masterAddress"]
-	output := "No masters to update"
+	output := "No masters to update\n"
+	mastersIp := ""
 	// Loop over all masters
 	if len(masters.master) > 0 {
 		output = ""
 		for i := 0; i < len(masters.master); i++ {
 			u := "http://" + masters.master[i].address + "/master_ip/" + handshake
-			//Create new request
+			//Make new request
 			resp, err := http.Get(u)
 			if err != nil {
-				fmt.Println(rw, "ERROR: Making request"+u)
+				fmt.Println(rw, "ERROR: Making request "+u)
 			}
-			output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+			output = output + u + "\tStatus: " + resp.Status + "\n"
+			mastersIp = mastersIp + "," + masters.master[i].address
 		}
 	}
+	rw.Write([]byte(mastersIp))
 	AddMaster(handshake)
 	fmt.Println("Handshake: " + handshake)
 	fmt.Println(output)
-	fmt.Fprintf(rw, output)
 }

@@ -166,13 +166,20 @@ func NotifyRouter() {
 
 	client := &http.Client{}
 	resp, err := client.Do(r)
-
 	if err != nil {
-		fmt.Printf("ERROR: Sending request" + url)
+		fmt.Printf("ERROR: Sending request" + url + "\n")
 	}
-	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+	fmt.Println("Handshake: " + routerAddress)
 
-	fmt.Println(output)
+	body, _ := ioutil.ReadAll(resp.Body)
+	ips := strings.Split(string(body), ",")
+	if len(ips) > 0 {
+		for i := 0; i < len(ips); i++ {
+			if ips[i] != ""{
+				AddMasterToList(ips[i])
+			}
+		}
+	}
 }
 
 //Adding a dataNode to master list and DB
@@ -240,8 +247,12 @@ func RemoveDataNode(ip string) {
 
 func AddMaster(rw http.ResponseWriter, r *http.Request){
 	ip := mux.Vars(r)["ip"] //Get master ip
+	AddMasterToList(ip)
+}
+
+func AddMasterToList(ip string){
 	mastersIp = append(mastersIp, ip)
-	fmt.Println("Registered new master: ip")
+	fmt.Println("Registered new master: " + ip)
 }
 
 //func get datanode ip
