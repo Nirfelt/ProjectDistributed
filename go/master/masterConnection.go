@@ -35,6 +35,7 @@ var (
 
 var routerAddress string = "localhost:9090"
 var masterDB string = "localhost:9191"
+var mastersIp []string
 
 func main() {
 	//Declare functions
@@ -52,6 +53,9 @@ func main() {
 
 	getFile := r.Path("/get_file/{id}")
 	getFile.Methods("GET").HandlerFunc(GetFileHandler)
+
+	getMasterIp := r.Path("/master_ip/{ip}")
+	getMasterIp.Methods("GET").HandlerFunc(AddMaster)
 
 	NotifyRouter()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
@@ -201,6 +205,7 @@ func AddDataNode(ip string) {
 }
 
 func RemoveDataNode(ip string) {
+	//Remove node from master list
 	if len(nodes.node) == 0 {
 		return
 	}
@@ -231,6 +236,12 @@ func RemoveDataNode(ip string) {
 	} else {
 		fmt.Println("\nIP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
 	}
+}
+
+func AddMaster(rw http.ResponseWriter, r *http.Request){
+	ip := mux.Vars(r)["ip"] //Get master ip
+	mastersIp = append(mastersIp, ip)
+	fmt.Println("Registered new master: ip")
 }
 
 //func get datanode ip
