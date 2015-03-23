@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 	"unicode"
@@ -24,13 +23,6 @@ var masters = masterlist{} // List with masters (struct)
 
 func main() {
 	r := mux.NewRouter()
-
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(addrs)
 
 	update := r.Path("/update")
 	update.Methods("POST").HandlerFunc(UploadHandler)
