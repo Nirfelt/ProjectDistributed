@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
-	"log"
+	//"log"
 	"net/http"
 	"os"
 	"strings"
 	"unicode"
+	"encoding/json"
 )
 
 type dataNodes struct {
@@ -30,40 +31,48 @@ var (
 )
 
 var routerAddress string = "localhost:9090"
+var masterDB string = "localhost:9191"
 
 func main() {
 	//Declare functions
 	flag.Parse()
-
 	r := mux.NewRouter()
+
 	update := r.Path("/update")
 	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
+
 	handshake := r.Path("/handshake/{nodeAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+
 	deleteFile := r.Path("/delete/{id}")
 	deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
-	NotifyRouter()
 
+	getFile := r.Path("/get_file/{id}")
+	getFile.Methods("GET").HandlerFunc(GetFileHandler)
+
+	NotifyRouter()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
 
-func AddDataNode(address string) {
-	node := node{address: address, ok: true}
-	nodes.node = append(nodes.node, node)
-	//update DB
-}
 
-func RemoveDataNode(node string) {
-	if len(nodes.node) == 0 {
-		return
+func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
+	//Get dataNode address from masterDB
+	id := mux.Vars(r)["id"]
+	resp, err := http.Get("http://" + masterDB + "/get_server/" + id)
+	if err != nil {
+		fmt.Println("ERROR: Sending request"+masterDB)
 	}
-	for i := range nodes.node {
-		if nodes.node[i].address == node {
-			nodes.node[i] = nodes.node[len(nodes.node)-1]
-			nodes.node = nodes.node[:len(nodes.node)-1]
-		}
+	//Handle response
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	var data []string
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		fmt.Println("ERROR: Unmarshall json")
 	}
-	//Update DB
+	for i := 0; i < len(data); i++ {
+		fmt.Println(data[i])
+	}
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
@@ -77,7 +86,6 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 
 		req, err := http.NewRequest("POST", u, ioutil.NopCloser(reader))
 		if err != nil {
-			log.Fatal(err)
 			fmt.Println(rw, "ERROR: Making request"+u)
 		}
 		req.Header = r.Header
@@ -85,20 +93,12 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Fatal(err)
 			fmt.Println(rw, "ERROR: Sending request"+u)
 		}
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
 	}
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
-}
-
-func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
-	handshake := mux.Vars(r)["nodeAddress"]
-	AddDataNode(handshake)
-
-	fmt.Println("Handshake: " + handshake)
 }
 
 //Func for multicasting id of file to delete to nodes
@@ -113,7 +113,6 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 		req, err := http.NewRequest("DELETE", u, nil) //Create new request
 		if err != nil {
-			log.Fatal(err)
 			fmt.Println(rw, "ERROR: Making request"+u)
 		}
 		req.Header = r.Header
@@ -122,7 +121,6 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 		client := &http.Client{}
 		resp, err := client.Do(req) //Send request, get response
 		if err != nil {
-			log.Fatal(err)
 			fmt.Println(rw, "ERROR: Sending request"+u)
 		}
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n" //Output string
@@ -131,28 +129,75 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, output)
 }
 
+//Handles new datanodes connecting
+func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
+	handshake := mux.Vars(r)["nodeAddress"]
+	AddDataNode(handshake)
+
+	fmt.Println("Handshake: " + handshake)
+}
+
 func NotifyRouter() {
 	masterAddress := "localhost:" + os.Getenv("PORT")
 
 	url := "http://" + routerAddress + "/handshake/" + masterAddress
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
-		log.Fatal(err)
 		fmt.Printf("ERROR: Making request" + url)
 	}
-
-	//r.Body(nodeAddress)
 
 	client := &http.Client{}
 	resp, err := client.Do(r)
 
 	if err != nil {
-		log.Fatal(err)
 		fmt.Printf("ERROR: Sending request" + url)
 	}
 	output := url + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
 
 	fmt.Println(output)
+}
+
+func AddDataNode(address string) {
+	node := node{address: address, ok: true}
+	nodes.node = append(nodes.node, node)
+	//update DB
+	u := "http://" + masterDB + "/add_server/" + address
+
+	req, err := http.NewRequest("PUT", u, nil) //Create new request
+	if err != nil {
+		fmt.Println("ERROR: Making request"+u)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("ERROR: Sending request"+u)
+	}
+	fmt.Println(u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n")
+}
+
+func RemoveDataNode(node string) {
+	if len(nodes.node) == 0 {
+		return
+	}
+	for i := range nodes.node {
+		if nodes.node[i].address == node {
+			nodes.node[i] = nodes.node[len(nodes.node)-1]
+			nodes.node = nodes.node[:len(nodes.node)-1]
+		}
+	}
+	//Update DB
+	u := "http://" + masterDB + "/delete_server/" + node
+
+	req, err := http.NewRequest("DELETE", u, nil) //Create new request
+	if err != nil {
+		fmt.Println("ERROR: Making request"+u)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("ERROR: Sending request"+u)
+	}
+	fmt.Println(u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n")
 }
 
 //func get datanode ip
