@@ -30,20 +30,23 @@ var (
 )
 
 var routerAddress string = "localhost:9090"
+var masterDB string = "localhost:9191"
 
 func main() {
 	//Declare functions
 	flag.Parse()
-
 	r := mux.NewRouter()
+
 	update := r.Path("/update")
 	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
+
 	handshake := r.Path("/handshake/{nodeAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+
 	deleteFile := r.Path("/delete/{id}")
 	deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
-	NotifyRouter()
 
+	NotifyRouter()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
 
@@ -51,6 +54,20 @@ func AddDataNode(address string) {
 	node := node{address: address, ok: true}
 	nodes.node = append(nodes.node, node)
 	//update DB
+	u := "http://" + masterDB + "/add_server/" + address
+
+	req, err := http.NewRequest("PUT", u, nil) //Create new request
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("ERROR: Making request"+u)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("ERROR: Sending request"+u)
+	}
+	fmt.Println(u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n")
 }
 
 func RemoveDataNode(node string) {
@@ -64,6 +81,20 @@ func RemoveDataNode(node string) {
 		}
 	}
 	//Update DB
+	u := "http://" + masterDB + "/delete_server/" + node
+
+	req, err := http.NewRequest("DELETE", u, nil) //Create new request
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("ERROR: Making request"+u)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("ERROR: Sending request"+u)
+	}
+	fmt.Println(u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n")
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
@@ -94,6 +125,7 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, output)
 }
 
+//Handles new datanodes connecting
 func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	handshake := mux.Vars(r)["nodeAddress"]
 	AddDataNode(handshake)
@@ -140,8 +172,6 @@ func NotifyRouter() {
 		log.Fatal(err)
 		fmt.Printf("ERROR: Making request" + url)
 	}
-
-	//r.Body(nodeAddress)
 
 	client := &http.Client{}
 	resp, err := client.Do(r)
