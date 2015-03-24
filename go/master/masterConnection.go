@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
+
+	"github.com/gorilla/mux"
 	//"log"
 	"database/sql"
 	"net"
@@ -66,6 +67,9 @@ func main() {
 	getNodeIp := r.Path("/node/{ip}")
 	go getNodeIp.Methods("GET").HandlerFunc(GetNewNode)
 
+	getSisterNode := r.Path("/sisternode")
+	go getSisterNode.Methods("GET").HandlerFunc(GetSisterNode)
+
 	NotifyRouter()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
@@ -97,6 +101,17 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	//Return random ip from list
 	rw.Write([]byte(all_ip[rand.Intn(len(all_ip))]))
+}
+
+func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
+	if len(nodes.node) == 0 {
+		rw.WriteHeader(http.StatusNotFound)
+		rw.Write([]byte("Not found"))
+		return
+	}
+
+	sister := nodes.node[0].address
+	rw.Write([]byte(sister))
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {

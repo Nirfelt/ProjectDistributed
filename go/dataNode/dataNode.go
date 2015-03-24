@@ -3,14 +3,14 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
-	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 //string that points to the devise own home folder
@@ -34,10 +34,30 @@ func main() {
 	getAll := r.Path("/getall").Subrouter()
 	getAll.Methods("GET").HandlerFunc(SendAllFiles)
 
+	// Delete all local files (if this is a crashed node in recovery)
+	DeleteLocalFiles()
+
+	// Notify master about our existence
 	NotifyMaster()
+
+	// Copy data from a sister data node
+	CopySister()
 
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
+}
+
+func DeleteLocalFiles() {
+	_, err := os.Stat(basePath)
+	fmt.Print("Clearing local files.. ")
+
+	// If the directory does not exist
+	if os.IsExist(err) {
+		os.Remove(basePath)
+	}
+	os.Mkdir(basePath, 0777)
+
+	fmt.Println("OK")
 }
 
 func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
@@ -111,9 +131,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
 }
 
-func OnStartUp() string {
-	ListFiles()
-
+func GetMasterAddress() string {
 	fmt.Println("Who is primary master?")
 
 	url := "http://" + routerAddress + "/getprimary"
@@ -133,11 +151,11 @@ func OnStartUp() string {
 }
 
 func NotifyMaster() {
-	masterAddress := OnStartUp()
-
+	masterAddress := GetMasterAddress()
 	nodeAddress := "localhost:" + os.Getenv("PORT")
 	url := "http://" + masterAddress + "/handshake/" + nodeAddress
 	r, err := http.NewRequest("POST", url, nil)
+
 	if err != nil {
 		log.Fatal(err)
 		fmt.Printf("ERROR: Making request" + url)
@@ -154,31 +172,12 @@ func NotifyMaster() {
 
 	fmt.Println(output)
 
-	CopySister()
-
 }
 
 //Function to get all files from another data node
 func CopySister() {
-	//sisters := GetNodeIP(masterAddress)
-	sisters := "8081,8082"
-	s := strings.Split(sisters, ",")
-	sisterNode1 = s[0]
-	sisterNode2 = s[1]
-	fmt.Println(sisterNode1)
-	fmt.Println(sisterNode2)
-
-	//contact sister 1
-	//else contact sister 2
-	//if file allready exists then overwrite it
-	//let master know everything is ok
-	//or send a GET for every file in own list, if not ok
-	//then send a new GET to recieve that file.
-
-}
-
-//Add all files to list
-func ListFiles() {
+	sister := GetDataNodeAddress()
+	fmt.Printf("Sis: %s\n", sister)
 
 }
 
@@ -188,8 +187,9 @@ func SendAllFiles(rw http.ResponseWriter, r *http.Request) {
 }
 
 //Function to contact master to get an ip to another data node
-func GetNodeIP(masterIP string) string {
-	url := "http://" + masterIP + "/getconnectednod/" + os.Getenv("PORT")
+func GetDataNodeAddress() string {
+	masterAddress := GetMasterAddress()
+	url := "http://" + masterAddress + "/sisternode"
 
 	resp, err := http.Get(url)
 
@@ -202,6 +202,9 @@ func GetNodeIP(masterIP string) string {
 
 	b := bytes.NewBuffer(body)
 
+	if b.String() == "localhost:"+os.Getenv("PORT") {
+		return ""
+	}
 	return b.String()
 }
 

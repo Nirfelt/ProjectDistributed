@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"unicode"
+
+	"github.com/gorilla/mux"
 )
 
 type masterlist struct {
