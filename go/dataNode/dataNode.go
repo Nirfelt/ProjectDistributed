@@ -7,10 +7,10 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 //string that points to the devise own home folder
@@ -30,6 +30,9 @@ func main() {
 
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
+
+	getAll := r.Path("/getall").Subrouter()
+	getAll.Methods("GET").HandlerFunc(SendAllFiles)
 
 	NotifyMaster()
 
@@ -109,6 +112,8 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func OnStartUp() string {
+	ListFiles()
+
 	fmt.Println("Who is primary master?")
 
 	url := "http://" + routerAddress + "/getprimary"
@@ -130,17 +135,7 @@ func OnStartUp() string {
 func NotifyMaster() {
 	masterAddress := OnStartUp()
 
-	//Test code to get own address
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(addrs)
-	//end of test code
-
 	nodeAddress := "localhost:" + os.Getenv("PORT")
-	fmt.Println(nodeAddress)
 	url := "http://" + masterAddress + "/handshake/" + nodeAddress
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -159,11 +154,38 @@ func NotifyMaster() {
 
 	fmt.Println(output)
 
-	sisters := GetNodeIP(masterAddress)
-	fmt.Println(sisters)
+	CopySister()
+
 }
 
 //Function to get all files from another data node
+func CopySister() {
+	//sisters := GetNodeIP(masterAddress)
+	sisters := "8081,8082"
+	s := strings.Split(sisters, ",")
+	sisterNode1 = s[0]
+	sisterNode2 = s[1]
+	fmt.Println(sisterNode1)
+	fmt.Println(sisterNode2)
+
+	//contact sister 1
+	//else contact sister 2
+	//if file allready exists then overwrite it
+	//let master know everything is ok
+	//or send a GET for every file in own list, if not ok
+	//then send a new GET to recieve that file.
+
+}
+
+//Add all files to list
+func ListFiles() {
+
+}
+
+//Send files
+func SendAllFiles(rw http.ResponseWriter, r *http.Request) {
+
+}
 
 //Function to contact master to get an ip to another data node
 func GetNodeIP(masterIP string) string {
