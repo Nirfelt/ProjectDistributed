@@ -117,14 +117,14 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func AddMaster(address string) {
-	if id > 0 {
-		masters.master[id-1].isPrimary = false
-	}
+	//if id > 0 {
+		//masters.master[id-1].isPrimary = false
+	//}
 
 	master := master{address: address, id: id, isPrimary: true}
 	masters.master = append(masters.master, master)
 
-	id++
+	//id++
 
 }
 

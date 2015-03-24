@@ -277,6 +277,7 @@ func RemoveDataNode(ip string) {
 		if nodes.node[i].address == ip {
 			nodes.node[i] = nodes.node[len(nodes.node)-1]
 			nodes.node = nodes.node[:len(nodes.node)-1]
+			fmt.Println("Removed node: " + ip)
 		}
 	}
 	//Update DB
@@ -323,10 +324,22 @@ func MasterHeartbeat() {
 			for i := 0; i < len(mastersIp); i++ {
 				conn, err := net.DialTimeout("tcp", mastersIp[i], 3000*time.Millisecond)
 				if err != nil {
-					fmt.Println("Timeout: " + mastersIp[i])
+					fmt.Println("Timeout master: " + mastersIp[i])
 					RemoveMaster(mastersIp[i])
 				} else {
-					fmt.Println("Response: " + conn.RemoteAddr().String() + " Status: OK")
+					fmt.Println("Response master: " + conn.RemoteAddr().String() + " Status: OK")
+				}
+			}
+		}
+		if len(nodes.node) > 0 {
+			for i := 0; i < len(nodes.node); i++ {
+				ip := nodes.node[i].address
+				conn, err := net.DialTimeout("tcp", ip, 3000*time.Millisecond)
+				if err != nil {
+					fmt.Println("Timeout datanode: " + ip)
+					RemoveDataNode(ip)
+				} else {
+					fmt.Println("Response datanode: " + conn.RemoteAddr().String() + " Status: OK")
 				}
 			}
 		}
