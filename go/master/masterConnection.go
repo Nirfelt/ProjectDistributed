@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	//"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"database/sql"
 	//"database/sql/driver"
 	"math/rand"
+	"time"
 	//_ "github.com/go-sql-driver/mysql"
 )
 
@@ -226,7 +228,10 @@ func NotifyRouter() {
 	}
 	fmt.Println("Handshake: " + routerAddress + ", router")
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("ERROR: Recieving master ip")
+	}
 	ips := strings.Split(string(body), ",")
 	if len(ips) > 0 {
 		for i := 0; i < len(ips); i++ {
@@ -236,6 +241,7 @@ func NotifyRouter() {
 		}
 	}
 	GetNodes()
+	go MasterHeartbeat()
 }
 
 //Adding a dataNode to master list and DB
@@ -259,26 +265,6 @@ func RemoveDataNode(ip string) {
 		}
 	}
 	//Update DB
-	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa") //Open DB connection
-	if err != nil {
-		fmt.Println("ERROR: Open DB")
-	}
-	var id int
-	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //check if any row has the ip
-	if err != sql.ErrNoRows { //If a row is returned
-		result, err := db.Exec("DELETE FROM servers WHERE ip = ?", ip) //Remove server server
-		if err != nil {
-			fmt.Println("\nIP :%s DELETE FAILED", ip)
-		}
-		affected, err := result.RowsAffected()
-		if err != nil { //If no rows were affected
-			fmt.Println("\nIP :%s COULD NOT BE DELETED, UNKNOWN ERROR", ip)
-		} else {
-			fmt.Println("\nIP DELETED: %s AT ROW %s", ip, affected) //REMOVED!
-		}
-	} else {
-		fmt.Println("\nIP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
-	}
 }
 
 func AddMaster(rw http.ResponseWriter, r *http.Request){
@@ -291,6 +277,45 @@ func AddMasterToList(ip string){
 	fmt.Println("Registered new master: " + ip)
 }
 
-//func get datanode ip
+func RemoveMaster(ip string) {
+	//Remove node from master list
+	if len(mastersIp) == 0 {
+		return
+	}
+	for i := 0; i < len(mastersIp); i++ {
+		if mastersIp[i] == ip {
+			url := "http://" + routerAddress + "/remove_master/" + mastersIp[i]
+			r, err := http.NewRequest("DELETE", url, nil)
+			if err != nil {
+				fmt.Printf("ERROR: Making request" + url)
+			}
+			client := &http.Client{}
+			resp, err := client.Do(r)
+			if err != nil {
+				fmt.Printf("ERROR: Sending request" + url + "\n")
+			}
+			fmt.Println("Removed: " + ip + " Router: " + resp.Status)
+			mastersIp[i] = mastersIp[len(mastersIp)-1]
+			mastersIp = mastersIp[:len(mastersIp)-1]
+		}
+	}
+}
+
+func MasterHeartbeat(){
+	for{
+		time.Sleep(5000 * time.Millisecond)
+		if len(mastersIp) > 0 {
+			for i := 0; i < len(mastersIp); i++ {
+				conn, err := net.DialTimeout("tcp", mastersIp[i], 3000 * time.Millisecond)
+				if err != nil{
+					fmt.Println("Timeout: " + mastersIp[i])
+					RemoveMaster(mastersIp[i])
+				}else{
+					fmt.Println("Response: " + conn.RemoteAddr().String() + " Status: OK")
+				}
+			}
+		}
+	}
+}
 
 //func return all files and folders

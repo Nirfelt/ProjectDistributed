@@ -34,6 +34,8 @@ func main() {
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
 	deletefile := r.Path("/deletefile")
 	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
+	removeMaster := r.Path("/remove_master/{ip}")
+	removeMaster.Methods("DELETE").HandlerFunc(RemoveMaster)
 
 	http.ListenAndServe(":9090", r)
 
@@ -111,12 +113,14 @@ func AddMaster(address string) {
 	masters.master = append(masters.master, master)
 }
 
-func RemoveMaster(address string) {
+func RemoveMaster(rw http.ResponseWriter, r *http.Request) {
+	ip := mux.Vars(r)["ip"]
 	if len(masters.master) == 0 {
 		return
 	}
-	for i := range masters.master {
-		if masters.master[i].address == address {
+	for i := 0; i < len(masters.master); i++ {
+		if masters.master[i].address == ip {
+			fmt.Println("Removed master: " + ip)
 			masters.master[i] = masters.master[len(masters.master)-1]
 			masters.master = masters.master[:len(masters.master)-1]
 		}
