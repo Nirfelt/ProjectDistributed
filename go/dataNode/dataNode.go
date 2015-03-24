@@ -48,13 +48,9 @@ func main() {
 }
 
 func DeleteLocalFiles() {
-	_, err := os.Stat(basePath)
 	fmt.Print("Clearing local files.. ")
 
-	// If the directory does not exist
-	if os.IsExist(err) {
-		os.Remove(basePath)
-	}
+	os.RemoveAll(basePath)
 	os.Mkdir(basePath, 0777)
 
 	fmt.Println("OK")
