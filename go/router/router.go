@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"unicode"
+	"net"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -40,6 +42,8 @@ func main() {
 	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
 	removeMaster := r.Path("/remove_master/{ip}")
 	removeMaster.Methods("DELETE").HandlerFunc(RemoveMaster)
+
+	go Heartbeat()
 
 	http.ListenAndServe(":9090", r)
 
@@ -160,4 +164,22 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	AddMaster(handshake)
 	fmt.Println("Handshake: " + handshake)
 	fmt.Println(output)
+}
+
+func Heartbeat() {
+	for {
+		time.Sleep(5000 * time.Millisecond)
+		if len(masters.master) == 1 {
+			ip := masters.master[0].address
+			conn, err := net.DialTimeout("tcp", ip, 3000*time.Millisecond)
+			if err != nil {
+				fmt.Println("Timeout: " + ip)
+				fmt.Println("Removed master: " + ip)
+				masters.master[0] = masters.master[len(masters.master)-1]
+				masters.master = masters.master[:len(masters.master)-1]
+			} else {
+				fmt.Println("Response: " + conn.RemoteAddr().String() + " Status: OK")
+			}
+		}
+	}
 }
