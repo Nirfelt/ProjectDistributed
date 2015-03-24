@@ -34,7 +34,7 @@ var (
 )
 
 var routerAddress string = "localhost:9090"
-var masterDB string = "localhost:9191"
+//var masterDB string = "localhost:9191"
 var mastersIp []string
 
 func main() {
@@ -43,19 +43,25 @@ func main() {
 	r := mux.NewRouter()
 
 	update := r.Path("/update")
-	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
+	go update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 
 	handshake := r.Path("/handshake/{nodeAddress}")
-	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+	go handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
 	deleteFile := r.Path("/delete/{id}")
-	deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
+	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
 	getFile := r.Path("/get_file/{id}")
-	getFile.Methods("GET").HandlerFunc(GetFileHandler)
+	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
 
 	getMasterIp := r.Path("/master_ip/{ip}")
-	getMasterIp.Methods("GET").HandlerFunc(AddMaster)
+	go getMasterIp.Methods("GET").HandlerFunc(AddMaster)
+
+	shareNodes := r.Path("/share_nodes")
+	go shareNodes.Methods("GET").HandlerFunc(ShareNodes)
+
+	getNodeIp := r.Path("/node/{ip}")
+	go getNodeIp.Methods("GET").HandlerFunc(GetNewNode)
 
 	NotifyRouter()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
@@ -150,9 +156,58 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 //Handles new datanodes connecting
 func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	handshake := mux.Vars(r)["nodeAddress"]
+	fmt.Println("Handshake: " + handshake + ", datanode")
 	AddDataNode(handshake)
+	//Send to other masters
+	for i := 0; i < len(mastersIp); i++ {
+		resp, err := http.Get("http://" + mastersIp[i] + "/node/" + handshake)
+		if err != nil {
+			fmt.Println("ERROR: Making request to: "+mastersIp[i])
+		} else{
+			fmt.Println("Node: " + handshake + "\tSent to: " + mastersIp[i] + "\tStatus: " + resp.Status)
+		}
+	}
+}
 
-	fmt.Println("Handshake: " + handshake)
+func GetNewNode(rw http.ResponseWriter, r *http.Request){
+	ip := mux.Vars(r)["ip"]
+	AddDataNode(ip)
+}
+
+func ShareNodes(rw http.ResponseWriter, r *http.Request){
+	output := ""
+	if len(nodes.node) > 0{
+		for i := 0; i < len(nodes.node); i++ {
+			output = output + "," + nodes.node[i].address
+			fmt.Println("Sent node: " + nodes.node[i].address)
+		}
+	}
+	rw.Write([]byte(output))
+}
+
+func GetNodes(){
+	if len(mastersIp) > 0 {
+		url := "http://" + mastersIp[0] + "/share_nodes"
+		r, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			fmt.Printf("ERROR: Making request " + url)
+		}
+		client := &http.Client{}
+		resp, err := client.Do(r)
+		if err != nil {
+			fmt.Println("ERROR: Sending request " + url)
+		} else{
+			body, _ := ioutil.ReadAll(resp.Body)
+			ips := strings.Split(string(body), ",")
+			if len(ips) > 0 {
+				for i := 0; i < len(ips); i++ {
+					if ips[i] != ""{
+						AddDataNode(ips[i])
+					}
+				}
+			}	
+		}
+	}
 }
 
 func NotifyRouter() {
@@ -169,7 +224,7 @@ func NotifyRouter() {
 	if err != nil {
 		fmt.Printf("ERROR: Sending request" + url + "\n")
 	}
-	fmt.Println("Handshake: " + routerAddress)
+	fmt.Println("Handshake: " + routerAddress + ", router")
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	ips := strings.Split(string(body), ",")
@@ -180,35 +235,16 @@ func NotifyRouter() {
 			}
 		}
 	}
+	GetNodes()
 }
 
 //Adding a dataNode to master list and DB
 func AddDataNode(ip string) {
 	node := node{address: ip, ok: true}
 	nodes.node = append(nodes.node, node)
+	fmt.Println("Added node: " + ip)
 	//Connect to DB
-	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
-	if err != nil {
-		fmt.Printf("ERROR: Open DB")
-	}
-	//Making DB insert
-	var id int
-	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //check if ip exists
-
-	if err == sql.ErrNoRows { //Check return rows
-		result, err := db.Exec("INSERT INTO servers (ip) VALUES (?)", ip) //add server
-		if err != nil {
-			fmt.Println("\nIP :%s INSERT FAILED", ip)
-		}
-		affected, err := result.RowsAffected()
-		if err != nil {
-			fmt.Println("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip)
-		} else {
-			fmt.Println("\nIP ADDED: %s AT ROW %s", ip, affected) //ADDED!
-		}
-	} else {
-		fmt.Println("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST", ip)
-	}
+	
 }
 
 func RemoveDataNode(ip string) {
