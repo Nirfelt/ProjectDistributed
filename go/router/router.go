@@ -16,10 +16,13 @@ type masterlist struct {
 }
 
 type master struct {
-	address string
+	address   string
+	id        int
+	isPrimary bool
 }
 
 var masters = masterlist{} // List with masters (struct)
+var id = 0
 
 func main() {
 	r := mux.NewRouter()
@@ -109,8 +112,15 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func AddMaster(address string) {
-	master := master{address: address}
+	if id > 0 {
+		masters.master[id-1].isPrimary = false
+	}
+
+	master := master{address: address, id: id, isPrimary: true}
 	masters.master = append(masters.master, master)
+
+	id++
+
 }
 
 func RemoveMaster(rw http.ResponseWriter, r *http.Request) {

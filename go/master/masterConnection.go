@@ -7,12 +7,12 @@ import (
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	//"log"
+	"database/sql"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"unicode"
-	"database/sql"
 	//"database/sql/driver"
 	"math/rand"
 	"time"
@@ -36,6 +36,7 @@ var (
 )
 
 var routerAddress string = "localhost:9090"
+
 //var masterDB string = "localhost:9191"
 var mastersIp []string
 
@@ -69,7 +70,6 @@ func main() {
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
 
-
 func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	//Connect to DB
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
@@ -90,7 +90,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 
 		err = rows.Scan(&ip)
 		if err != nil {
-		fmt.Println("ERROR: row.Scan")
+			fmt.Println("ERROR: row.Scan")
 		}
 
 		all_ip = append(all_ip, ip)
@@ -164,21 +164,21 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	for i := 0; i < len(mastersIp); i++ {
 		resp, err := http.Get("http://" + mastersIp[i] + "/node/" + handshake)
 		if err != nil {
-			fmt.Println("ERROR: Making request to: "+mastersIp[i])
-		} else{
+			fmt.Println("ERROR: Making request to: " + mastersIp[i])
+		} else {
 			fmt.Println("Node: " + handshake + "\tSent to: " + mastersIp[i] + "\tStatus: " + resp.Status)
 		}
 	}
 }
 
-func GetNewNode(rw http.ResponseWriter, r *http.Request){
+func GetNewNode(rw http.ResponseWriter, r *http.Request) {
 	ip := mux.Vars(r)["ip"]
 	AddDataNode(ip)
 }
 
-func ShareNodes(rw http.ResponseWriter, r *http.Request){
+func ShareNodes(rw http.ResponseWriter, r *http.Request) {
 	output := ""
-	if len(nodes.node) > 0{
+	if len(nodes.node) > 0 {
 		for i := 0; i < len(nodes.node); i++ {
 			output = output + "," + nodes.node[i].address
 			fmt.Println("Sent node: " + nodes.node[i].address)
@@ -187,7 +187,7 @@ func ShareNodes(rw http.ResponseWriter, r *http.Request){
 	rw.Write([]byte(output))
 }
 
-func GetNodes(){
+func GetNodes() {
 	if len(mastersIp) > 0 {
 		url := "http://" + mastersIp[0] + "/share_nodes"
 		r, err := http.NewRequest("GET", url, nil)
@@ -198,16 +198,16 @@ func GetNodes(){
 		resp, err := client.Do(r)
 		if err != nil {
 			fmt.Println("ERROR: Sending request " + url)
-		} else{
+		} else {
 			body, _ := ioutil.ReadAll(resp.Body)
 			ips := strings.Split(string(body), ",")
 			if len(ips) > 0 {
 				for i := 0; i < len(ips); i++ {
-					if ips[i] != ""{
+					if ips[i] != "" {
 						AddDataNode(ips[i])
 					}
 				}
-			}	
+			}
 		}
 	}
 }
@@ -235,7 +235,7 @@ func NotifyRouter() {
 	ips := strings.Split(string(body), ",")
 	if len(ips) > 0 {
 		for i := 0; i < len(ips); i++ {
-			if ips[i] != ""{
+			if ips[i] != "" {
 				AddMasterToList(ips[i])
 			}
 		}
@@ -250,7 +250,7 @@ func AddDataNode(ip string) {
 	nodes.node = append(nodes.node, node)
 	fmt.Println("Added node: " + ip)
 	//Connect to DB
-	
+
 }
 
 func RemoveDataNode(ip string) {
@@ -267,12 +267,12 @@ func RemoveDataNode(ip string) {
 	//Update DB
 }
 
-func AddMaster(rw http.ResponseWriter, r *http.Request){
+func AddMaster(rw http.ResponseWriter, r *http.Request) {
 	ip := mux.Vars(r)["ip"] //Get master ip
 	AddMasterToList(ip)
 }
 
-func AddMasterToList(ip string){
+func AddMasterToList(ip string) {
 	mastersIp = append(mastersIp, ip)
 	fmt.Println("Registered new master: " + ip)
 }
@@ -301,21 +301,36 @@ func RemoveMaster(ip string) {
 	}
 }
 
-func MasterHeartbeat(){
-	for{
+func MasterHeartbeat() {
+	for {
 		time.Sleep(5000 * time.Millisecond)
 		if len(mastersIp) > 0 {
 			for i := 0; i < len(mastersIp); i++ {
-				conn, err := net.DialTimeout("tcp", mastersIp[i], 3000 * time.Millisecond)
-				if err != nil{
+				conn, err := net.DialTimeout("tcp", mastersIp[i], 3000*time.Millisecond)
+				if err != nil {
 					fmt.Println("Timeout: " + mastersIp[i])
 					RemoveMaster(mastersIp[i])
-				}else{
+				} else {
 					fmt.Println("Response: " + conn.RemoteAddr().String() + " Status: OK")
 				}
 			}
 		}
 	}
+}
+
+func InitiateBully() {
+	//Get masters from router
+	//Send GET request to masters with higher id
+	//
+}
+
+func BullyRespond() {
+	//If ID is higher then the one asked reply that
+	//Send out new InitiateBully
+}
+
+func NotifyElectionResult() {
+	//Tell router that a new primary has been selected
 }
 
 //func return all files and folders
