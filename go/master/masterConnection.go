@@ -10,6 +10,7 @@ import (
 	//"log"
 	"database/sql"
 	//"database/sql/driver"
+	"encoding/json"
 	_ "github.com/go-sql-driver/mysql"
 	"math/rand"
 	"net"
@@ -57,6 +58,9 @@ func main() {
 
 	getFile := r.Path("/get_file/{id}")
 	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
+
+	getAllFiles := r.Path("/get_files")
+	go getAllFiles.Methods("GET").HandlerFunc(getJsonFilesAndFolders)
 
 	getMasterIp := r.Path("/master_ip/{ip}")
 	go getMasterIp.Methods("GET").HandlerFunc(AddMaster)
@@ -421,19 +425,34 @@ func MasterHeartbeat() {
 	}
 }
 
-func InitiateBully() {
-	//Get masters from router
-	//Send GET request to masters with higher id
-	//
+type File struct {
+	Faculty string `json:"faculty"`
+	Course  string `json:"course"`
+	Year    string `json:"year"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
 }
 
-func BullyRespond() {
-	//If ID is higher then the one asked reply that
-	//Send out new InitiateBully
-}
+//json of all files
+func getJsonFilesAndFolders(rw http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
 
-func NotifyElectionResult() {
-	//Tell router that a new primary has been selected
-}
+	rows, err := db.Query("SELECT * FROM files")
+	checkError(err)
 
-//func return all files and folders
+	var all_json []byte
+
+	for rows.Next() {
+		file := new(File)
+
+		err = rows.Scan(&file.ID, &file.Faculty, &file.Course, &file.Year, &file.Name)
+
+		checkError(err)
+
+		jsonString, _ := json.Marshal(file)
+
+		all_json = append(all_json, jsonString...)
+	}
+	rw.Write(all_json)
+}
