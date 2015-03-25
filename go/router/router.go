@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
+	"time"
 	"unicode"
+
+	"github.com/gorilla/mux"
 )
 
 type masterlist struct {
@@ -20,6 +23,7 @@ type master struct {
 }
 
 var masters = masterlist{} // List with masters (struct)
+var id = 0
 
 func main() {
 	r := mux.NewRouter()
@@ -34,6 +38,10 @@ func main() {
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
 	deletefile := r.Path("/deletefile")
 	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
+	removeMaster := r.Path("/remove_master/{ip}")
+	removeMaster.Methods("DELETE").HandlerFunc(RemoveMaster)
+
+	go Heartbeat()
 
 	http.ListenAndServe(":9090", r)
 
@@ -107,16 +115,20 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func AddMaster(address string) {
+
 	master := master{address: address}
 	masters.master = append(masters.master, master)
+
 }
 
-func RemoveMaster(address string) {
+func RemoveMaster(rw http.ResponseWriter, r *http.Request) {
+	ip := mux.Vars(r)["ip"]
 	if len(masters.master) == 0 {
 		return
 	}
-	for i := range masters.master {
-		if masters.master[i].address == address {
+	for i := 0; i < len(masters.master); i++ {
+		if masters.master[i].address == ip {
+			fmt.Println("Removed master: " + ip)
 			masters.master[i] = masters.master[len(masters.master)-1]
 			masters.master = masters.master[:len(masters.master)-1]
 		}
@@ -145,4 +157,22 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	AddMaster(handshake)
 	fmt.Println("Handshake: " + handshake)
 	fmt.Println(output)
+}
+
+func Heartbeat() {
+	for {
+		time.Sleep(5000 * time.Millisecond)
+		if len(masters.master) == 1 {
+			ip := masters.master[0].address
+			conn, err := net.DialTimeout("tcp", ip, 3000*time.Millisecond)
+			if err != nil {
+				fmt.Println("Timeout: " + ip)
+				fmt.Println("Removed master: " + ip)
+				masters.master[0] = masters.master[len(masters.master)-1]
+				masters.master = masters.master[:len(masters.master)-1]
+			} else {
+				fmt.Println("Response: " + conn.RemoteAddr().String() + " Status: OK")
+			}
+		}
+	}
 }
