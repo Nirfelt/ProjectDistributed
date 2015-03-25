@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
-	"unicode"
-	"net"
 	"time"
+	"unicode"
 
 	"github.com/gorilla/mux"
 )
@@ -19,9 +19,7 @@ type masterlist struct {
 }
 
 type master struct {
-	address   string
-	id        int
-	isPrimary bool
+	address string
 }
 
 var masters = masterlist{} // List with masters (struct)
@@ -117,14 +115,9 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func AddMaster(address string) {
-	//if id > 0 {
-		//masters.master[id-1].isPrimary = false
-	//}
 
-	master := master{address: address, id: id, isPrimary: true}
+	master := master{address: address}
 	masters.master = append(masters.master, master)
-
-	//id++
 
 }
 

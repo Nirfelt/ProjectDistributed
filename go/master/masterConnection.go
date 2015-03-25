@@ -109,7 +109,7 @@ func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
 		rw.Write([]byte("Not found"))
 		return
 	}
-
+	//fix so that it's not the node asked that gets returned but her two sisternodes
 	sister := nodes.node[0].address
 	rw.Write([]byte(sister))
 }

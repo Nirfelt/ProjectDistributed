@@ -122,6 +122,7 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(rw, err)
 	}
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
+	ListFiles()
 }
 
 func GetMasterAddress() string {
@@ -193,6 +194,11 @@ func GetDataNodeAddress() string {
 		return ""
 	}
 	return b.String()
+}
+
+func ListFiles() {
+	//files := os.File.Readdir(basePath)
+	//fmt.Println(files)
 }
 
 //Add timestamp on datanodes
