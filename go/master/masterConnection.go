@@ -47,22 +47,22 @@ func main() {
 	flag.Parse()
 	r := mux.NewRouter()
 
-	update := r.Path("/update")
+	update := r.Path("/files")
 	go update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 
 	handshake := r.Path("/handshake/{nodeAddress}")
 	go handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
-	deleteFile := r.Path("/delete/{id}")
+	deleteFile := r.Path("/files/{id}")
 	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
-	getFile := r.Path("/get_file/{id}")
+	getFile := r.Path("/files/{id}")
 	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
 
 	getAllFiles := r.Path("/get_files")
 	go getAllFiles.Methods("GET").HandlerFunc(getJsonFilesAndFolders)
 
-	getMasterIp := r.Path("/master_ip/{ip}")
+	getMasterIp := r.Path("/master/{ip}")
 	go getMasterIp.Methods("GET").HandlerFunc(AddMaster)
 
 	shareNodes := r.Path("/share_nodes")
@@ -71,7 +71,7 @@ func main() {
 	getNodeIp := r.Path("/node/{ip}")
 	go getNodeIp.Methods("GET").HandlerFunc(GetNewNode)
 
-	getSisterNode := r.Path("/sisternode")
+	getSisterNode := r.Path("/node")
 	go getSisterNode.Methods("GET").HandlerFunc(GetSisterNode)
 
 	NotifyRouter()
@@ -125,7 +125,7 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
-		u := "http://" + nodes.node[i].address + "/update"
+		u := "http://" + nodes.node[i].address + "/files"
 		reader := bytes.NewReader(body)
 		//Create new request
 		req, err := http.NewRequest("POST", u, ioutil.NopCloser(reader))
@@ -154,7 +154,7 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
-		u := "http://" + nodes.node[i].address + "/delete/" + id //Specific url for every node
+		u := "http://" + nodes.node[i].address + "/files/" + id //Specific url for every node
 
 		req, err := http.NewRequest("DELETE", u, nil) //Create new request
 		if err != nil {
@@ -379,7 +379,7 @@ func RemoveMaster(ip string) {
 	}
 	for i := 0; i < len(mastersIp); i++ {
 		if mastersIp[i] == ip {
-			url := "http://" + routerAddress + "/remove_master/" + mastersIp[i]
+			url := "http://" + routerAddress + "/master/" + mastersIp[i]
 			r, err := http.NewRequest("DELETE", url, nil)
 			if err != nil {
 				fmt.Printf("ERROR: Making request" + url)

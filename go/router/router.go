@@ -28,17 +28,17 @@ var id = 0
 func main() {
 	r := mux.NewRouter()
 
-	update := r.Path("/update")
+	update := r.Path("/files")
 	update.Methods("POST").HandlerFunc(UploadHandler)
-	getPrimary := r.Path("/getprimary")
+	getPrimary := r.Path("/master")
 	getPrimary.Methods("GET").HandlerFunc(GetPrimaryHandler)
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
-	getfile := r.Path("/getfile")
+	getfile := r.Path("/files")
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
-	deletefile := r.Path("/deletefile")
+	deletefile := r.Path("/files")
 	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
-	removeMaster := r.Path("/remove_master/{ip}")
+	removeMaster := r.Path("/master/{ip}")
 	removeMaster.Methods("DELETE").HandlerFunc(RemoveMaster)
 
 	go Heartbeat()
@@ -54,7 +54,7 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	output := ""
 	body, _ := ioutil.ReadAll(r.Body)
-	u := "http://" + masters.master[0].address + "/update"
+	u := "http://" + masters.master[0].address + "/files"
 	reader := bytes.NewReader(body)
 
 	req, err := http.NewRequest("POST", u, ioutil.NopCloser(reader))
@@ -93,7 +93,7 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	id := r.FormValue("id")
 	output := ""
-	u := "http://" + masters.master[0].address + "/delete/" + id
+	u := "http://" + masters.master[0].address + "/files/" + id
 
 	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -143,7 +143,7 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	if len(masters.master) > 0 {
 		output = ""
 		for i := 0; i < len(masters.master); i++ {
-			u := "http://" + masters.master[i].address + "/master_ip/" + handshake
+			u := "http://" + masters.master[i].address + "/master/" + handshake
 			//Make new request
 			resp, err := http.Get(u)
 			if err != nil {

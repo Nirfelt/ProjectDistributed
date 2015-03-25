@@ -22,16 +22,16 @@ var routerAddress string = "localhost:9090"
 func main() {
 	r := mux.NewRouter()
 
-	update := r.Path("/update").Subrouter()
+	update := r.Path("/files").Subrouter()
 	update.Methods("POST").HandlerFunc(FileUploadHandler)
 
-	remove := r.Path("/delete/{id}").Subrouter()
+	remove := r.Path("/files/{id}").Subrouter()
 	remove.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
-	get := r.Path("/get/{id}").Subrouter()
+	get := r.Path("/files/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
-	info := r.Path("/getfileinfo").Subrouter()
+	info := r.Path("/files").Subrouter()
 	info.Methods("GET").HandlerFunc(ListFilesHandler)
 
 	// Delete all local files (if this is a crashed node in recovery)
@@ -49,7 +49,7 @@ func main() {
 
 //Delete local files
 func DeleteLocalFiles() {
-	fmt.Print("Clearing local files.. ")
+	fmt.Print("Clearing local files.. \n")
 
 	//Delete folder an dall files in it
 	os.RemoveAll(basePath)
@@ -133,13 +133,13 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(rw, err)
 	}
 
-	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
+	fmt.Printf("File uploaded successfully: %s\n", id)
 }
 
 //Send GET request to router to get address to primary master
 func GetMasterAddress() string {
 	//Set url
-	url := "http://" + routerAddress + "/getprimary"
+	url := "http://" + routerAddress + "/master"
 
 	//Send request
 	resp, err := http.Get(url)
@@ -189,14 +189,14 @@ func GetListFromSister() {
 	sister := GetDataNodeAddress()
 	//If sister is empty no copying will be initiated
 	if sister == "" {
-		fmt.Printf("No sister available")
+		fmt.Printf("No sister available\n")
 		return
 	}
 
 	fmt.Printf("Sister: %s\n", sister)
 
 	//Create url to get list of files
-	url := "http://" + sister + "/getfileinfo"
+	url := "http://" + sister + "/files"
 
 	//Send request
 	resp, err := http.Get(url)
@@ -219,7 +219,7 @@ func GetDataNodeAddress() string {
 	//Get address to primary master
 	masterAddress := GetMasterAddress()
 	//Create url to request
-	url := "http://" + masterAddress + "/sisternode"
+	url := "http://" + masterAddress + "/node"
 	//Send request
 	resp, err := http.Get(url)
 	if err != nil {
