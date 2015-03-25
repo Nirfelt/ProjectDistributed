@@ -319,12 +319,12 @@ func AddNodeToDB(ip string) {
 		checkError(err)
 		affected, err := result.RowsAffected()
 		if err != nil { //om inga rader blev affectade av insättning
-			fmt.Println("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip) //något gick fel...
+			fmt.Printf("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR\n", ip) //något gick fel...
 		} else {
-			fmt.Println("\nIP ADDED: %s AT ROW %s", ip, affected) //ADDERAD!
+			fmt.Printf("\nIP ADDED: %s AT ROW %s\n", ip, affected) //ADDERAD!
 		}
 	} else {
-		fmt.Println("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST", ip) //då adderar vi inte
+		fmt.Printf("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST\n", ip) //då adderar vi inte
 	}
 }
 
