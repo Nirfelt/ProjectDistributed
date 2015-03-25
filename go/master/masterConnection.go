@@ -53,7 +53,7 @@ func main() {
 	handshake := r.Path("/handshake/{nodeAddress}")
 	go handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
-	deleteFile := r.Path("/files/{id}")
+	deleteFile := r.Path("/deletefile/{id}")
 	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
 	//getFile := r.Path("/files/{id}")
@@ -159,7 +159,7 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
-		u := "http://" + nodes.node[i].address + "/files/" + id //Specific url for every node
+		u := "http://" + nodes.node[i].address + "/deletefile/" + id //Specific url for every node
 
 		req, err := http.NewRequest("DELETE", u, nil) //Create new request
 		if err != nil {
@@ -176,10 +176,9 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n" //Output string
 	}
 
-	output += DeleteFileFromDB(id)
+	DeleteFileFromDB(id)
 
-	fmt.Println(output)
-	fmt.Fprintf(rw, output)
+	fmt.Println("Master sent delete req")
 }
 
 func DeleteFileFromDB(id string) string {

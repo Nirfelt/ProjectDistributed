@@ -25,7 +25,7 @@ func main() {
 	update := r.Path("/files").Subrouter()
 	update.Methods("POST").HandlerFunc(FileUploadHandler)
 
-	remove := r.Path("/files/{id}").Subrouter()
+	remove := r.Path("/deletefile/{id}").Subrouter()
 	remove.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
 	get := r.Path("/files/{id}").Subrouter()
