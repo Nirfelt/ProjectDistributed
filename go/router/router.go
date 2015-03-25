@@ -81,8 +81,23 @@ func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusOK)
-	fmt.Println("Hello client")
+	if len(masters.master) == 0 {
+		fmt.Println(rw, "ERROR: No registered masters")
+		return
+	}
+	id := r.FormValue("id")
+
+	url := "http://" + masters.master[0].address + "/files/" + id
+
+	//Send request
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+
+	fmt.Println("Router sent GET file req")
 }
 
 func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {

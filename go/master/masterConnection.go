@@ -56,8 +56,12 @@ func main() {
 	deleteFile := r.Path("/files/{id}")
 	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
+	//getFile := r.Path("/files/{id}")
+	//go getFile.Methods("GET").HandlerFunc(GetFileHandler)
+
+	//Temp to test get method
 	getFile := r.Path("/files/{id}")
-	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
+	go getFile.Methods("GET").HandlerFunc(GetFileHandler2)
 
 	getAllFiles := r.Path("/get_files")
 	go getAllFiles.Methods("GET").HandlerFunc(getJsonFilesAndFolders)
@@ -105,6 +109,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	//Return random ip from list
 	rw.Write([]byte(all_ip[rand.Intn(len(all_ip))]))
+
 }
 
 func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
@@ -455,4 +460,25 @@ func getJsonFilesAndFolders(rw http.ResponseWriter, r *http.Request) {
 		all_json = append(all_json, jsonString...)
 	}
 	rw.Write(all_json)
+}
+
+func GetFileHandler2(rw http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	if len(nodes.node) == 0 {
+		fmt.Println(rw, "ERROR: No registered data nodes")
+		return
+	}
+
+	url := "http://" + nodes.node[0].address + "/files/" + id
+
+	//Send request
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+
+	fmt.Println("Master sent GET file req")
 }
