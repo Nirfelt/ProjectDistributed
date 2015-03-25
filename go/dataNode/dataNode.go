@@ -90,12 +90,9 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
-	//id := mux.Vars(r)["id"]
 	id := r.FormValue("id")
 	fmt.Println("Thanks for the request")
 
-	//fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
-	// the FormFile function takes in the POST input id file
 	file, _, err := r.FormFile("file")
 
 	if err != nil {
@@ -196,11 +193,6 @@ func GetDataNodeAddress() string {
 }
 
 func ListFiles() {
-	//files := os.File.Readdirnames(basePath)
-	//fmt.Println(files)
-	//files, _ := filepath.Glob(basePath)
-	//fmt.Println(files)
-	//filesfilepath.Walk(root, walkFn)
 	var allFiles string
 	files, _ := ioutil.ReadDir(basePath + "/")
 	for _, f := range files {
@@ -210,7 +202,3 @@ func ListFiles() {
 	}
 	fmt.Println(allFiles)
 }
-
-//Add timestamp on datanodes
-
-//Function to tell master when a file has been saved
