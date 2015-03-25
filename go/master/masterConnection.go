@@ -9,15 +9,15 @@ import (
 	"github.com/gorilla/mux"
 	//"log"
 	"database/sql"
+	//"database/sql/driver"
+	_ "github.com/go-sql-driver/mysql"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"strings"
-	"unicode"
-	//"database/sql/driver"
-	"math/rand"
 	"time"
-	//_ "github.com/go-sql-driver/mysql"
+	"unicode"
 )
 
 type dataNodes struct {
@@ -80,9 +80,9 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("ERROR: Opening DB")
 	}
-	//Get dataNode address from DB
-	id := mux.Vars(r)["id"]
 
+	id := mux.Vars(r)["id"]
+	//Get dataNode address from DB
 	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver ON servers.id=fileserver.server_id WHERE file_id = ?", id)
 	if err != nil {
 		fmt.Println("ERROR: SQL statement DB")
@@ -166,8 +166,38 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 		}
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n" //Output string
 	}
+
+	output += DeleteFileFromDB(id)
+
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
+}
+
+func DeleteFileFromDB(id string) string {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
+
+	err = db.QueryRow("SELECT * FROM files WHERE id = ?", id).Scan(&id) //kolla om någon rad har fil id
+	checkError(err)
+
+	if err != sql.ErrNoRows { //om det kom tillbaka en rad
+		result, err := db.Exec("DELETE FROM files WHERE id = ?", id) //ta bort fil
+		checkError(err)
+		_, err = result.RowsAffected()
+		if err != nil { //om inga rader blev affectade av borttagningen
+			return "\nFILE: " + id + " COULD NOT BE DELETED, UNKNOWN ERROR" //något gick fel...
+		} else {
+			return "\nFILE DELETED: " + id //BORTTAGEN!
+		}
+	} else {
+		return "\nFILE: " + id + " COULD NOT BE DELETED, DO NOT EXIST" //vi kan ju inte ta bort något som inte finns...
+	}
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println("Error: ", err, "<----ERROR----\n")
+	}
 }
 
 //Handles new datanodes connecting
@@ -265,7 +295,29 @@ func AddDataNode(ip string) {
 	nodes.node = append(nodes.node, node)
 	fmt.Println("Added node: " + ip)
 	//Connect to DB
+	AddNodeToDB(ip)
+}
 
+func AddNodeToDB(ip string) {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
+
+	var id int
+	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //kolla om någon rad redan har ip-numret
+	checkError(err)
+
+	if err == sql.ErrNoRows { //om det inte kom tillbaka några rader
+		result, err := db.Exec("INSERT INTO servers (ip) VALUES (?)", ip) //addera server
+		checkError(err)
+		affected, err := result.RowsAffected()
+		if err != nil { //om inga rader blev affectade av insättning
+			fmt.Println("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip) //något gick fel...
+		} else {
+			fmt.Println("\nIP ADDED: %s AT ROW %s", ip, affected) //ADDERAD!
+		}
+	} else {
+		fmt.Println("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST", ip) //då adderar vi inte
+	}
 }
 
 func RemoveDataNode(ip string) {
@@ -281,6 +333,29 @@ func RemoveDataNode(ip string) {
 		}
 	}
 	//Update DB
+}
+
+//Tar bort noden med ip (input)
+func DeleteNodeFromDB(ip string) {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
+
+	var id int
+	err = db.QueryRow("SELECT * FROM servers WHERE ip = ?", ip).Scan(&id) //kolla om någon rad har ip-numret
+	checkError(err)
+
+	if err != sql.ErrNoRows { //om det kom tillbaka en rad
+		result, err := db.Exec("DELETE FROM servers WHERE ip = ?", ip) //ta bort server
+		checkError(err)
+		affected, err := result.RowsAffected()
+		if err != nil { //om inga rader blev affectade av borttagningen
+			fmt.Println("\nIP :%s COULD NOT BE DELETED, UNKNOWN ERROR", ip) //något gick fel...
+		} else {
+			fmt.Println("\nIP DELETED: %s AT ROW %s", ip, affected) //BORTTAGEN!
+		}
+	} else {
+		fmt.Println("\nIP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
+	}
 }
 
 func AddMaster(rw http.ResponseWriter, r *http.Request) {
