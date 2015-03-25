@@ -3,14 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
-
-	"github.com/gorilla/mux"
 )
 
 //string that points to the devise own home folder
@@ -197,8 +196,19 @@ func GetDataNodeAddress() string {
 }
 
 func ListFiles() {
-	//files := os.File.Readdir(basePath)
+	//files := os.File.Readdirnames(basePath)
 	//fmt.Println(files)
+	//files, _ := filepath.Glob(basePath)
+	//fmt.Println(files)
+	//filesfilepath.Walk(root, walkFn)
+	var allFiles string
+	files, _ := ioutil.ReadDir(basePath + "/")
+	for _, f := range files {
+		allFiles += ("," + f.Name())
+		fmt.Println(f.Name())
+
+	}
+	fmt.Println(allFiles)
 }
 
 //Add timestamp on datanodes
