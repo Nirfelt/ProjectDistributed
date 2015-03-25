@@ -103,6 +103,11 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	fmt.Println("Router sent GET file req")
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	fmt.Println("Router recieved file")
+	fmt.Println(data)
 }
 
 func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {

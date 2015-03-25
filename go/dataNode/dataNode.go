@@ -78,6 +78,7 @@ func FileGetHandler(rw http.ResponseWriter, r *http.Request) {
 	rw.Write(data)
 
 	fmt.Printf("Data node: %s\n sent file: %s\n", os.Getenv("PORT"), id)
+	fmt.Println(data)
 
 }
 

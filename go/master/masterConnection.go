@@ -477,7 +477,14 @@ func GetFileHandler2(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	defer resp.Body.Close()
+	//defer resp.Body.Close()
 
 	fmt.Println("Master sent GET file req")
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	rw.Write(data)
+
+	fmt.Println("Master sent file to router")
+	fmt.Println(data)
 }
