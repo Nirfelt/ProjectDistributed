@@ -3,14 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
-
-	"github.com/gorilla/mux"
 )
 
 //string that points to the devise own home folder
@@ -91,12 +90,9 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
-	//id := mux.Vars(r)["id"]
 	id := r.FormValue("id")
 	fmt.Println("Thanks for the request")
 
-	//fmt.Fprintf(rw, "Faculty: %s, Course: %s, Year: %s, Id: %s\n", faculty, course, year, id)
-	// the FormFile function takes in the POST input id file
 	file, _, err := r.FormFile("file")
 
 	if err != nil {
@@ -197,10 +193,12 @@ func GetDataNodeAddress() string {
 }
 
 func ListFiles() {
-	//files := os.File.Readdir(basePath)
-	//fmt.Println(files)
+	var allFiles string
+	files, _ := ioutil.ReadDir(basePath + "/")
+	for _, f := range files {
+		allFiles += ("," + f.Name())
+		fmt.Println(f.Name())
+
+	}
+	fmt.Println(allFiles)
 }
-
-//Add timestamp on datanodes
-
-//Function to tell master when a file has been saved
