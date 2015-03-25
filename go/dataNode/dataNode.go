@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 //string that points to the devise own home folder
@@ -30,6 +31,11 @@ func main() {
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
+	//Path to recieve Get string list of files /getfileinfo
+
+	info := r.Path("/getfileinfo").Subrouter()
+	info.Methods("GET").HandlerFunc(ListFilesHandler)
+
 	// Delete all local files (if this is a crashed node in recovery)
 	DeleteLocalFiles()
 
@@ -37,7 +43,7 @@ func main() {
 	NotifyMaster()
 
 	// Copy data from a sister data node
-	CopySister()
+	GetListFromSister()
 
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 
@@ -118,7 +124,6 @@ func FileUploadHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(rw, err)
 	}
 	fmt.Fprintf(rw, "File uploaded successfully: %s\n", id)
-	ListFiles()
 }
 
 func GetMasterAddress() string {
@@ -165,9 +170,31 @@ func NotifyMaster() {
 }
 
 //Function to get all files from another data node
-func CopySister() {
+func GetListFromSister() {
 	sister := GetDataNodeAddress()
+	if sister == "" {
+		fmt.Printf("No sister available")
+		return
+	}
+
 	fmt.Printf("Sis: %s\n", sister)
+
+	url := "http://" + sister + "/getfileinfo"
+
+	resp, err := http.Get(url)
+
+	if err != nil {
+		log.Fatal(err)
+		fmt.Printf("ERROR: Sending request" + url)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	b := bytes.NewBuffer(body)
+
+	CopySister(b.String(), sister)
 }
 
 //Function to contact master to get an ip to another data node
@@ -192,7 +219,7 @@ func GetDataNodeAddress() string {
 	return b.String()
 }
 
-func ListFiles() {
+func ListFiles() string {
 	var allFiles string
 	files, _ := ioutil.ReadDir(basePath + "/")
 	for _, f := range files {
@@ -201,4 +228,58 @@ func ListFiles() {
 
 	}
 	fmt.Println(allFiles)
+	return allFiles
+}
+
+func ListFilesHandler(rw http.ResponseWriter, r *http.Request) {
+	files := ListFiles()
+	rw.WriteHeader(http.StatusOK)
+	rw.Write([]byte(files))
+
+}
+
+func CopySister(files string, sister string) {
+	fmt.Println(files)
+	s := strings.Split(files, ",")
+	fmt.Println(s)
+	//s = append(s(0), s(1)...)
+	//s = s[0 : len(s)-1]
+	s[0] = s[len(s)-1]
+	s = s[:len(s)-1]
+
+	for _, id := range s {
+		url := "http://" + sister + "/get" + id
+
+		resp, err := http.Get(url)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		file := bytes.NewReader(body)
+
+		filePath := path.Join(basePath, id)
+
+		out, err := os.Create(filePath)
+		if err != nil {
+			fmt.Println("Unable to create the file for writing.")
+			return
+		}
+
+		defer out.Close()
+
+		_, err = io.Copy(out, file)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("File uploaded successfully: %s\n", id)
+
+	}
 }
