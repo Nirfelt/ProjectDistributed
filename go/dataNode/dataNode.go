@@ -31,9 +31,6 @@ func main() {
 	get := r.Path("/get/{id}").Subrouter()
 	get.Methods("GET").HandlerFunc(FileGetHandler)
 
-	getAll := r.Path("/getall").Subrouter()
-	getAll.Methods("GET").HandlerFunc(SendAllFiles)
-
 	// Delete all local files (if this is a crashed node in recovery)
 	DeleteLocalFiles()
 
@@ -174,12 +171,6 @@ func NotifyMaster() {
 func CopySister() {
 	sister := GetDataNodeAddress()
 	fmt.Printf("Sis: %s\n", sister)
-
-}
-
-//Send files
-func SendAllFiles(rw http.ResponseWriter, r *http.Request) {
-
 }
 
 //Function to contact master to get an ip to another data node
