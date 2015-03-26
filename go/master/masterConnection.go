@@ -123,6 +123,10 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 	//Read body
 	body, _ := ioutil.ReadAll(r.Body)
 
+	name, output := AddFile(rw, r)
+
+	id := getLastInsertFile(name)
+
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
 		u := "http://" + nodes.node[i].address + "/update"
@@ -132,6 +136,7 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println(rw, "ERROR: Making request"+u)
 		}
+
 		req.Header = r.Header
 		req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
 		client := &http.Client{}
@@ -140,10 +145,66 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 			fmt.Println(rw, "ERROR: Sending request"+u)
 		}
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
+		output += AddFileToNode(nodes.node[i].address, id)
 	}
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
 	//Add to DB
+}
+
+//Adderar fil med name, year, course och faculty från input
+func AddFile(rw http.ResponseWriter, r *http.Request) (string, string) {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
+
+	file := r.FormValue("file")
+	year := r.FormValue("year")
+	course := r.FormValue("course")
+	faculty := r.FormValue("faculty")
+
+	result, err := db.Exec("INSERT INTO files (faculty, course, year, name) VALUES (?, ?, ?, ?)", faculty, course, year, file) //addera fil
+	checkError(err)
+
+	_, err = result.RowsAffected()
+	if err != nil { //om inga rader blev affectade av insättning
+		return file, "\nFILE: " + file + " COULD NOT BE ADDED, UNKNOWN ERROR" //något gick fel...
+	} else {
+		return file, "\nFILE ADDED: " + file //ADDERAD!
+	}
+}
+
+//Adderar existerande fil till existerande nod
+func AddFileToNode(serverIP, file string) string {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
+
+	server, err := db.Exec("SELECT id FROM servers WHERE ip=?", serverIP) //addera fil
+	checkError(err)
+
+	result, err := db.Exec("INSERT INTO fileserver VALUES (?, ?)", server, file) //addera fil
+	checkError(err)
+
+	_, err = result.RowsAffected()
+	if err != nil { //om inga rader blev affectade av insättning
+		return "\nFILE COULD NOT BE ADDED TO " + serverIP + ", UNKNOWN ERROR" //något gick fel...
+	} else {
+		return "\nFILE ADDED TO " + serverIP //ADDERAD!
+	}
+}
+
+func getLastInsertFile(file string) string {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
+
+	var id string
+	err = db.QueryRow("SELECT MAX(id) FROM files WHERE name=?", file).Scan(&id) //addera fil
+	checkError(err)
+
+	if err != sql.ErrNoRows {
+		return id
+	} else {
+		return ""
+	}
 }
 
 //Func for multicasting id of file to delete to nodes
