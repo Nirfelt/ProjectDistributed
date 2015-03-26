@@ -51,26 +51,26 @@ func main() {
 	go update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 
 	handshake := r.Path("/handshake/{nodeAddress}")
-	go handshake.Methods("POST").HandlerFunc(HandshakeHandler)
+	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
 	deleteFile := r.Path("/deletefile/{id}")
-	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
+	deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
 	//Temp to test get method
 	getFile := r.Path("/files/{id}")
-	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
+	getFile.Methods("GET").HandlerFunc(GetFileHandler)
 
 	getMasterIp := r.Path("/master/{ip}")
-	go getMasterIp.Methods("GET").HandlerFunc(AddMaster)
+	getMasterIp.Methods("GET").HandlerFunc(AddMaster)
 
 	shareNodes := r.Path("/share_nodes")
-	go shareNodes.Methods("GET").HandlerFunc(ShareNodes)
+	shareNodes.Methods("GET").HandlerFunc(ShareNodes)
 
 	getNodeIp := r.Path("/node/{ip}")
-	go getNodeIp.Methods("GET").HandlerFunc(GetNewNode)
+	getNodeIp.Methods("GET").HandlerFunc(GetNewNode)
 
 	getSisterNode := r.Path("/node")
-	go getSisterNode.Methods("GET").HandlerFunc(GetSisterNode)
+	getSisterNode.Methods("GET").HandlerFunc(GetSisterNode)
 
 	NotifyRouter()
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
@@ -383,9 +383,11 @@ func NotifyRouter() {
 func AddDataNode(ip string) {
 	node := node{address: ip, ok: true}
 	nodes.node = append(nodes.node, node)
+	fmt.Println("Added node: " + ip)
+	fmt.Println("Number of nodes: " + string(len(nodes.node)))
 	//Connect to DB
 	AddNodeToDB(ip)
-	fmt.Println("Added node: " + ip)
+	
 
 }
 
@@ -416,11 +418,12 @@ func RemoveDataNode(ip string) {
 	if len(nodes.node) == 0 {
 		return
 	}
-	for i := range nodes.node {
+	for i := 0; i < len(nodes.node); i++  {
 		if nodes.node[i].address == ip {
 			nodes.node[i] = nodes.node[len(nodes.node)-1]
 			nodes.node = nodes.node[:len(nodes.node)-1]
 			fmt.Println("Removed node: " + ip)
+			fmt.Println("Number of nodes: " + string(len(nodes.node)))
 		}
 	}
 	//Update DB
@@ -501,7 +504,7 @@ func MasterHeartbeat() {
 		if len(nodes.node) > 0 {
 			for i := 0; i < len(nodes.node); i++ {
 				ip := nodes.node[i].address
-				conn, err := net.DialTimeout("tcp", ip, 3000*time.Millisecond)
+				conn, err := net.DialTimeout("tcp", ip, 5000*time.Millisecond)
 				if err != nil {
 					fmt.Println("Timeout datanode: " + ip)
 					RemoveDataNode(ip)

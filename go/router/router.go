@@ -42,7 +42,7 @@ func main() {
 	r.HandleFunc("/", Index)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
 
-	update := r.Path("/files")
+	update := r.Path("/ufiles")
 	update.Methods("POST").HandlerFunc(UploadHandler)
 
 	getPrimary := r.Path("/master")
@@ -51,7 +51,7 @@ func main() {
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
-	getfile := r.Path("/files")
+	getfile := r.Path("/gfiles")
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
 
 	deletefile := r.Path("/deletefile")
@@ -111,6 +111,8 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	output = u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
+	context := Context{Title: "TEST!"}
+    render(rw, "list", context)
 }
 
 func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
@@ -141,6 +143,8 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Router recieved file")
 	fmt.Println(data)
+	context := Context{Title: "TEST!"}
+    render(rw, "list", context)
 }
 
 func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
@@ -168,6 +172,8 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("Router recieved %s\n", resp.Status)
 	fmt.Println("Router sent delete req")
+	context := Context{Title: "TEST!"}
+    render(rw, "list", context)
 }
 
 func AddMaster(address string) {
