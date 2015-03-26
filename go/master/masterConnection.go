@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"sync"
 )
 
 type dataNodes struct {
@@ -31,6 +32,8 @@ type node struct {
 }
 
 var nodes = dataNodes{} // List with dataNodes (struct)
+
+var mutex = &sync.Mutex{}
 
 var (
 	listen = flag.String("listen", "localhost:8080", "listen on address")
@@ -48,7 +51,7 @@ func main() {
 	r := mux.NewRouter()
 
 	update := r.Path("/files")
-	go update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
+	update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 
 	handshake := r.Path("/handshake/{nodeAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
@@ -72,8 +75,22 @@ func main() {
 	getSisterNode := r.Path("/node")
 	getSisterNode.Methods("GET").HandlerFunc(GetSisterNode)
 
+	getFilenames := r.Path("/get_filenames")
+	getFilenames.Methods("GET").HandlerFunc(GetFilenames)
+
 	NotifyRouter()
+
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
+}
+
+func GetFilenames(rw http.ResponseWriter, r *http.Request){
+	resp, err := http.Get("http://" + nodes.node[0].address + "/files")
+	if err != nil{
+		fmt.Println("ERROR: Filenames")
+	}else{
+		body, _ := ioutil.ReadAll(resp.Body)
+		rw.Write(body)
+	}
 }
 
 func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
@@ -382,7 +399,9 @@ func NotifyRouter() {
 //Adding a dataNode to master list and DB
 func AddDataNode(ip string) {
 	node := node{address: ip, ok: true}
+	mutex.Lock()
 	nodes.node = append(nodes.node, node)
+	mutex.Unlock()
 	fmt.Println("Added node: " + ip)
 	fmt.Println("Number of nodes: " + string(len(nodes.node)))
 	//Connect to DB
@@ -415,6 +434,7 @@ func AddNodeToDB(ip string) {
 
 func RemoveDataNode(ip string) {
 	//Remove node from master list
+	mutex.Lock()
 	if len(nodes.node) == 0 {
 		return
 	}
@@ -426,6 +446,7 @@ func RemoveDataNode(ip string) {
 			fmt.Println("Number of nodes: " + string(len(nodes.node)))
 		}
 	}
+	mutex.Unlock()
 	//Update DB
 	DeleteNodeFromDB(ip)
 }
@@ -492,7 +513,7 @@ func MasterHeartbeat() {
 		time.Sleep(5000 * time.Millisecond)
 		if len(mastersIp) > 0 {
 			for i := 0; i < len(mastersIp); i++ {
-				conn, err := net.DialTimeout("tcp", mastersIp[i], 3000*time.Millisecond)
+				conn, err := net.DialTimeout("tcp", mastersIp[i], 10000*time.Millisecond)
 				if err != nil {
 					fmt.Println("Timeout master: " + mastersIp[i])
 					RemoveMaster(mastersIp[i])
@@ -504,7 +525,7 @@ func MasterHeartbeat() {
 		if len(nodes.node) > 0 {
 			for i := 0; i < len(nodes.node); i++ {
 				ip := nodes.node[i].address
-				conn, err := net.DialTimeout("tcp", ip, 5000*time.Millisecond)
+				conn, err := net.DialTimeout("tcp", ip, 10000*time.Millisecond)
 				if err != nil {
 					fmt.Println("Timeout datanode: " + ip)
 					RemoveDataNode(ip)

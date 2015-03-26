@@ -27,6 +27,7 @@ type master struct {
 type Context struct {
     Title  string
     Static string
+    Files string
 }
 
 var masters = masterlist{} // List with masters (struct)
@@ -67,12 +68,13 @@ func main() {
 }
 
 func Index(w http.ResponseWriter, req *http.Request) {
-    context := Context{Title: "TEST!"}
+    context := Context{Title: "Files: "}
     render(w, "list", context)
 }
 
 func render(w http.ResponseWriter, tmpl string, context Context) {
     context.Static = STATIC_URL
+    context.Files = WriteFiles()
     tmpl_list := []string{"templates/index.html",
         fmt.Sprintf("templates/%s.html", tmpl)}
     t, err := template.ParseFiles(tmpl_list...)
@@ -83,6 +85,22 @@ func render(w http.ResponseWriter, tmpl string, context Context) {
     if err != nil {
         fmt.Println("template executing error: ", err)
     }
+}
+
+func WriteFiles() string{
+	output := ""
+	resp, err := http.Get("http://" + masters.master[0].address + "/get_filenames")
+	if err != nil{
+		fmt.Println("ERROR: Getting filelist")
+	}else{
+		body, _ := ioutil.ReadAll(resp.Body)
+		files := strings.Split(strings.TrimLeft(string(body), ","), ",")
+		for i := 0; i < len(files); i++ {
+			output += fmt.Sprintf("%s", files[i])
+		}
+	}
+	
+	return output
 }
 
 func UploadHandler(rw http.ResponseWriter, r *http.Request) {

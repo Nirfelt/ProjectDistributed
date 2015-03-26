@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <link rel="icon" href="{{ .Static }}img/favicon.ico">>
+    <link rel="icon" href="{{ .Static }}img/favicon.ico">
 
     <!-- Bootstrap core CSS -->
     <link href="{{ .Static }}css/bootstrap.min.css" rel="stylesheet" type="text/css">
@@ -27,5 +27,8 @@
   <div class="page-header">
     <h3>{{ .Title }}</h3>
   </div>
-  <p>We have a HTML web page, woot!</p>
+  <div class="">
+    {{ .Files}}
+  </div>
+  
 {{ end }}
