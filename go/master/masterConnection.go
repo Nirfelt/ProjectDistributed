@@ -10,7 +10,7 @@ import (
 	//"log"
 	"database/sql"
 	//"database/sql/driver"
-	"encoding/json"
+	//"encoding/json"
 	_ "github.com/go-sql-driver/mysql"
 	"math/rand"
 	"net"
@@ -56,15 +56,9 @@ func main() {
 	deleteFile := r.Path("/deletefile/{id}")
 	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
-	//getFile := r.Path("/files/{id}")
-	//go getFile.Methods("GET").HandlerFunc(GetFileHandler)
-
 	//Temp to test get method
 	getFile := r.Path("/files/{id}")
-	go getFile.Methods("GET").HandlerFunc(GetFileHandler2)
-
-	getAllFiles := r.Path("/get_files")
-	go getAllFiles.Methods("GET").HandlerFunc(getJsonFilesAndFolders)
+	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
 
 	getMasterIp := r.Path("/master/{ip}")
 	go getMasterIp.Methods("GET").HandlerFunc(AddMaster)
@@ -83,6 +77,11 @@ func main() {
 }
 
 func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
+	if len(nodes.node) == 0 {
+		fmt.Println(rw, "ERROR: No registered data nodes")
+		return
+	}
+
 	//Connect to DB
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 	if err != nil {
@@ -90,11 +89,13 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	id := mux.Vars(r)["id"]
+
 	//Get dataNode address from DB
 	rows, err := db.Query("SELECT ip FROM servers JOIN fileserver ON servers.id=fileserver.server_id WHERE file_id = ?", id)
 	if err != nil {
 		fmt.Println("ERROR: SQL statement DB")
 	}
+
 	//Loop all ip to a list
 	var all_ip []string
 	for rows.Next() {
@@ -107,9 +108,27 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 
 		all_ip = append(all_ip, ip)
 	}
-	//Return random ip from list
-	rw.Write([]byte(all_ip[rand.Intn(len(all_ip))]))
 
+	ip := all_ip[rand.Intn(len(all_ip))]
+
+	url := "http://" + ip + "/files/" + id
+
+	//Send request
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//defer resp.Body.Close()
+
+	fmt.Println("Master sent GET file req")
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	rw.Write(data)
+
+	fmt.Println("Master sent file to router")
+	fmt.Println(data)
 }
 
 func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
@@ -124,13 +143,20 @@ func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
+	_, header, _ := r.FormFile("file")
+	year := r.FormValue("year")
+	course := r.FormValue("course")
+	faculty := r.FormValue("faculty")
+
 	output := ""
 	//Read body
 	body, _ := ioutil.ReadAll(r.Body)
 
-	name, output := AddFile(rw, r)
+	name, output := AddFile(header.Filename, year, course, faculty)
 
 	id := getLastInsertFile(name)
+
+	fmt.Println("LAST INSERTED " + id)
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
@@ -158,14 +184,9 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 }
 
 //Adderar fil med name, year, course och faculty från input
-func AddFile(rw http.ResponseWriter, r *http.Request) (string, string) {
+func AddFile(file, year, course, faculty string) (string, string) {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 	checkError(err)
-
-	file := r.FormValue("file")
-	year := r.FormValue("year")
-	course := r.FormValue("course")
-	faculty := r.FormValue("faculty")
 
 	result, err := db.Exec("INSERT INTO files (faculty, course, year, name) VALUES (?, ?, ?, ?)", faculty, course, year, file) //addera fil
 	checkError(err)
@@ -362,9 +383,10 @@ func NotifyRouter() {
 func AddDataNode(ip string) {
 	node := node{address: ip, ok: true}
 	nodes.node = append(nodes.node, node)
-	fmt.Println("Added node: " + ip)
 	//Connect to DB
 	AddNodeToDB(ip)
+	fmt.Println("Added node: " + ip)
+
 }
 
 func AddNodeToDB(ip string) {
@@ -402,6 +424,7 @@ func RemoveDataNode(ip string) {
 		}
 	}
 	//Update DB
+	DeleteNodeFromDB(ip)
 }
 
 //Tar bort noden med ip (input)
@@ -499,14 +522,14 @@ type File struct {
 }
 
 //json of all files
-func getJsonFilesAndFolders(rw http.ResponseWriter, r *http.Request) {
+func getFilesAndFolders() string {
 	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
 	checkError(err)
 
 	rows, err := db.Query("SELECT * FROM files")
 	checkError(err)
 
-	var all_json []byte
+	var all_files string
 
 	for rows.Next() {
 		file := new(File)
@@ -515,37 +538,19 @@ func getJsonFilesAndFolders(rw http.ResponseWriter, r *http.Request) {
 
 		checkError(err)
 
-		jsonString, _ := json.Marshal(file)
-
-		all_json = append(all_json, jsonString...)
+		all_files += file.ID + "," + file.Name + "|"
 	}
-	rw.Write(all_json)
+	all_files = strings.TrimRight(all_files, "|")
+	return all_files
 }
 
-func GetFileHandler2(rw http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+func emptyDB() {
+	db, err := sql.Open("mysql", "misa:password@tcp(mahsql.sytes.net:3306)/misa")
+	checkError(err)
 
-	if len(nodes.node) == 0 {
-		fmt.Println(rw, "ERROR: No registered data nodes")
-		return
-	}
+	_, err = db.Exec("TRUNCATE TABLE files")
+	checkError(err)
 
-	url := "http://" + nodes.node[0].address + "/files/" + id
-
-	//Send request
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	//defer resp.Body.Close()
-
-	fmt.Println("Master sent GET file req")
-
-	data, err := ioutil.ReadAll(resp.Body)
-
-	rw.Write(data)
-
-	fmt.Println("Master sent file to router")
-	fmt.Println(data)
+	_, err = db.Exec("TRUNCATE TABLE servers")
+	checkError(err)
 }
