@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"flag"
+	"html/template"
 
 	"github.com/gorilla/mux"
 )
@@ -22,11 +24,23 @@ type master struct {
 	address string
 }
 
+type Context struct {
+    Title  string
+    Static string
+}
+
 var masters = masterlist{} // List with masters (struct)
 var id = 0
+const STATIC_URL string = "/static/"
 
 func main() {
+	var staticPath = flag.String("staticPath", "static/", "Path to static files")
+	flag.Parse()
+
 	r := mux.NewRouter()
+
+	r.HandleFunc("/", Index)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
 
 	update := r.Path("/files")
 	update.Methods("POST").HandlerFunc(UploadHandler)
@@ -50,6 +64,25 @@ func main() {
 
 	http.ListenAndServe(":9090", r)
 
+}
+
+func Index(w http.ResponseWriter, req *http.Request) {
+    context := Context{Title: "TEST!"}
+    render(w, "list", context)
+}
+
+func render(w http.ResponseWriter, tmpl string, context Context) {
+    context.Static = STATIC_URL
+    tmpl_list := []string{"templates/index.html",
+        fmt.Sprintf("templates/%s.html", tmpl)}
+    t, err := template.ParseFiles(tmpl_list...)
+    if err != nil {
+        fmt.Println("template parsing error: ", err)
+    }
+    err = t.Execute(w, context)
+    if err != nil {
+        fmt.Println("template executing error: ", err)
+    }
 }
 
 func UploadHandler(rw http.ResponseWriter, r *http.Request) {
