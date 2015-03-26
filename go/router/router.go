@@ -28,17 +28,22 @@ var id = 0
 func main() {
 	r := mux.NewRouter()
 
-	update := r.Path("/update")
+	update := r.Path("/files")
 	update.Methods("POST").HandlerFunc(UploadHandler)
-	getPrimary := r.Path("/getprimary")
+
+	getPrimary := r.Path("/master")
 	getPrimary.Methods("GET").HandlerFunc(GetPrimaryHandler)
+
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
-	getfile := r.Path("/getfile")
+
+	getfile := r.Path("/files")
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
+
 	deletefile := r.Path("/deletefile")
-	deletefile.Methods("DELETE").HandlerFunc(DeleteFileHandler)
-	removeMaster := r.Path("/remove_master/{ip}")
+	deletefile.Methods("GET").HandlerFunc(DeleteFileHandler)
+
+	removeMaster := r.Path("/master/{ip}")
 	removeMaster.Methods("DELETE").HandlerFunc(RemoveMaster)
 
 	go Heartbeat()
@@ -54,7 +59,7 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	output := ""
 	body, _ := ioutil.ReadAll(r.Body)
-	u := "http://" + masters.master[0].address + "/update"
+	u := "http://" + masters.master[0].address + "/files"
 	reader := bytes.NewReader(body)
 
 	req, err := http.NewRequest("POST", u, ioutil.NopCloser(reader))
@@ -81,19 +86,38 @@ func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusOK)
-	fmt.Println("Hello client")
-}
-
-func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
-	fmt.Println("router ok")
 	if len(masters.master) == 0 {
 		fmt.Println(rw, "ERROR: No registered masters")
 		return
 	}
 	id := r.FormValue("id")
-	output := ""
-	u := "http://" + masters.master[0].address + "/delete/" + id
+
+	url := "http://" + masters.master[0].address + "/files/" + id
+
+	//Send request
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+
+	fmt.Println("Router sent GET file req")
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	fmt.Println("Router recieved file")
+	fmt.Println(data)
+}
+
+func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
+	if len(masters.master) == 0 {
+		fmt.Println(rw, "ERROR: No registered masters")
+		return
+	}
+	id := r.FormValue("id")
+
+	u := "http://" + masters.master[0].address + "/deletefile/" + id
 
 	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -109,9 +133,8 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 		fmt.Println(rw, "ERROR: Sending request"+u)
 	}
-	output = u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto
-	fmt.Println(output)
-	fmt.Fprintf(rw, output)
+	fmt.Printf("Router recieved %s\n", resp.Status)
+	fmt.Println("Router sent delete req")
 }
 
 func AddMaster(address string) {
@@ -143,7 +166,7 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	if len(masters.master) > 0 {
 		output = ""
 		for i := 0; i < len(masters.master); i++ {
-			u := "http://" + masters.master[i].address + "/master_ip/" + handshake
+			u := "http://" + masters.master[i].address + "/master/" + handshake
 			//Make new request
 			resp, err := http.Get(u)
 			if err != nil {

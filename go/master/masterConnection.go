@@ -47,22 +47,26 @@ func main() {
 	flag.Parse()
 	r := mux.NewRouter()
 
-	update := r.Path("/update")
+	update := r.Path("/files")
 	go update.Methods("POST").HandlerFunc(ProxyHandlerFunc)
 
 	handshake := r.Path("/handshake/{nodeAddress}")
 	go handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
-	deleteFile := r.Path("/delete/{id}")
+	deleteFile := r.Path("/deletefile/{id}")
 	go deleteFile.Methods("DELETE").HandlerFunc(FileDeleteHandler)
 
-	getFile := r.Path("/get_file/{id}")
-	go getFile.Methods("GET").HandlerFunc(GetFileHandler)
+	//getFile := r.Path("/files/{id}")
+	//go getFile.Methods("GET").HandlerFunc(GetFileHandler)
+
+	//Temp to test get method
+	getFile := r.Path("/files/{id}")
+	go getFile.Methods("GET").HandlerFunc(GetFileHandler2)
 
 	getAllFiles := r.Path("/get_files")
 	go getAllFiles.Methods("GET").HandlerFunc(getJsonFilesAndFolders)
 
-	getMasterIp := r.Path("/master_ip/{ip}")
+	getMasterIp := r.Path("/master/{ip}")
 	go getMasterIp.Methods("GET").HandlerFunc(AddMaster)
 
 	shareNodes := r.Path("/share_nodes")
@@ -71,7 +75,7 @@ func main() {
 	getNodeIp := r.Path("/node/{ip}")
 	go getNodeIp.Methods("GET").HandlerFunc(GetNewNode)
 
-	getSisterNode := r.Path("/sisternode")
+	getSisterNode := r.Path("/node")
 	go getSisterNode.Methods("GET").HandlerFunc(GetSisterNode)
 
 	NotifyRouter()
@@ -105,6 +109,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	//Return random ip from list
 	rw.Write([]byte(all_ip[rand.Intn(len(all_ip))]))
+
 }
 
 func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
@@ -129,7 +134,7 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
-		u := "http://" + nodes.node[i].address + "/update"
+		u := "http://" + nodes.node[i].address + "/files"
 		reader := bytes.NewReader(body)
 		//Create new request
 		req, err := http.NewRequest("POST", u, ioutil.NopCloser(reader))
@@ -215,7 +220,7 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
-		u := "http://" + nodes.node[i].address + "/delete/" + id //Specific url for every node
+		u := "http://" + nodes.node[i].address + "/deletefile/" + id //Specific url for every node
 
 		req, err := http.NewRequest("DELETE", u, nil) //Create new request
 		if err != nil {
@@ -232,10 +237,9 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n" //Output string
 	}
 
-	output += DeleteFileFromDB(id)
+	DeleteFileFromDB(id)
 
-	fmt.Println(output)
-	fmt.Fprintf(rw, output)
+	fmt.Println("Master sent delete req")
 }
 
 func DeleteFileFromDB(id string) string {
@@ -376,12 +380,12 @@ func AddNodeToDB(ip string) {
 		checkError(err)
 		affected, err := result.RowsAffected()
 		if err != nil { //om inga rader blev affectade av insättning
-			fmt.Println("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip) //något gick fel...
+			fmt.Printf("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR\n", ip) //något gick fel...
 		} else {
-			fmt.Println("\nIP ADDED: %s AT ROW %s", ip, affected) //ADDERAD!
+			fmt.Printf("\nIP ADDED: %s AT ROW %s\n", ip, affected) //ADDERAD!
 		}
 	} else {
-		fmt.Println("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST", ip) //då adderar vi inte
+		fmt.Printf("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST\n", ip) //då adderar vi inte
 	}
 }
 
@@ -440,7 +444,7 @@ func RemoveMaster(ip string) {
 	}
 	for i := 0; i < len(mastersIp); i++ {
 		if mastersIp[i] == ip {
-			url := "http://" + routerAddress + "/remove_master/" + mastersIp[i]
+			url := "http://" + routerAddress + "/master/" + mastersIp[i]
 			r, err := http.NewRequest("DELETE", url, nil)
 			if err != nil {
 				fmt.Printf("ERROR: Making request" + url)
@@ -516,4 +520,32 @@ func getJsonFilesAndFolders(rw http.ResponseWriter, r *http.Request) {
 		all_json = append(all_json, jsonString...)
 	}
 	rw.Write(all_json)
+}
+
+func GetFileHandler2(rw http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	if len(nodes.node) == 0 {
+		fmt.Println(rw, "ERROR: No registered data nodes")
+		return
+	}
+
+	url := "http://" + nodes.node[0].address + "/files/" + id
+
+	//Send request
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//defer resp.Body.Close()
+
+	fmt.Println("Master sent GET file req")
+
+	data, err := ioutil.ReadAll(resp.Body)
+
+	rw.Write(data)
+
+	fmt.Println("Master sent file to router")
+	fmt.Println(data)
 }
