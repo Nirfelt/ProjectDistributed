@@ -40,10 +40,10 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", Index)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
+	go r.HandleFunc("/", Index)
+	go r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
 
-	update := r.Path("/ufiles")
+	update := r.Path("/files")
 	update.Methods("POST").HandlerFunc(UploadHandler)
 
 	getPrimary := r.Path("/master")
@@ -52,7 +52,7 @@ func main() {
 	handshake := r.Path("/handshake/{masterAddress}")
 	handshake.Methods("POST").HandlerFunc(HandshakeHandler)
 
-	getfile := r.Path("/gfiles")
+	getfile := r.Path("/files")
 	getfile.Methods("GET").HandlerFunc(GetFileHandler)
 
 	deletefile := r.Path("/deletefile")
@@ -128,7 +128,7 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	output = u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto
 	fmt.Println(output)
-	fmt.Fprintf(rw, output)
+	//fmt.Fprintf(rw, output)
 	context := Context{Title: "TEST!"}
     render(rw, "list", context)
 }

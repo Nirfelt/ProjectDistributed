@@ -160,20 +160,20 @@ func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
-	_, header, _ := r.FormFile("file")
-	year := r.FormValue("year")
-	course := r.FormValue("course")
-	faculty := r.FormValue("faculty")
+	//_, header, _ := r.FormFile("file")
+	//year := r.FormValue("year")
+	//course := r.FormValue("course")
+	//faculty := r.FormValue("faculty")
 
 	output := ""
 	//Read body
 	body, _ := ioutil.ReadAll(r.Body)
 
-	name, output := AddFile(header.Filename, year, course, faculty)
+	//name, output := AddFile(header.Filename, year, course, faculty)
 
-	id := getLastInsertFile(name)
+	//id := getLastInsertFile(name)
 
-	fmt.Println("LAST INSERTED " + id)
+	//fmt.Println("LAST INSERTED " + id)
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
@@ -193,7 +193,7 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 			fmt.Println(rw, "ERROR: Sending request"+u)
 		}
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
-		output += AddFileToNode(nodes.node[i].address, id)
+		//output += AddFileToNode(nodes.node[i].address, id)
 	}
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
@@ -400,14 +400,20 @@ func NotifyRouter() {
 func AddDataNode(ip string) {
 	node := node{address: ip, ok: true}
 	mutex.Lock()
-	nodes.node = append(nodes.node, node)
+	ok := true
+	for i := 0; i < len(nodes.node); i++ {
+		if ip == nodes.node[i].address {
+			ok = false
+		}
+	}
+	if ok {
+		nodes.node = append(nodes.node, node)
+		fmt.Println("Added node: " + ip)
+		fmt.Println("Number of nodes: " + string(len(nodes.node)))
+		AddNodeToDB(ip)
+	}
 	mutex.Unlock()
-	fmt.Println("Added node: " + ip)
-	fmt.Println("Number of nodes: " + string(len(nodes.node)))
 	//Connect to DB
-	AddNodeToDB(ip)
-	
-
 }
 
 func AddNodeToDB(ip string) {
@@ -423,12 +429,12 @@ func AddNodeToDB(ip string) {
 		checkError(err)
 		affected, err := result.RowsAffected()
 		if err != nil { //om inga rader blev affectade av insättning
-			fmt.Printf("\nIP :%s COULD NOT BE ADDED, UNKNOWN ERROR\n", ip) //något gick fel...
+			fmt.Println("IP :%s COULD NOT BE ADDED, UNKNOWN ERROR", ip) //något gick fel...
 		} else {
-			fmt.Printf("\nIP ADDED: %s AT ROW %s\n", ip, affected) //ADDERAD!
+			fmt.Println("IP ADDED: %s AT ROW %s", ip, affected) //ADDERAD!
 		}
 	} else {
-		fmt.Printf("\nIP :%s COULD NOT BE ADDED, ALREADY EXIST\n", ip) //då adderar vi inte
+		fmt.Println("IP :%s COULD NOT BE ADDED, ALREADY EXIST", ip) //då adderar vi inte
 	}
 }
 
@@ -465,12 +471,12 @@ func DeleteNodeFromDB(ip string) {
 		checkError(err)
 		affected, err := result.RowsAffected()
 		if err != nil { //om inga rader blev affectade av borttagningen
-			fmt.Println("\nIP :%s COULD NOT BE DELETED, UNKNOWN ERROR", ip) //något gick fel...
+			fmt.Println("IP :%s COULD NOT BE DELETED, UNKNOWN ERROR", ip) //något gick fel...
 		} else {
-			fmt.Println("\nIP DELETED: %s AT ROW %s", ip, affected) //BORTTAGEN!
+			fmt.Println("IP DELETED: %s AT ROW %s", ip, affected) //BORTTAGEN!
 		}
 	} else {
-		fmt.Println("\nIP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
+		fmt.Println("IP :%s COULD NOT BE DELETED, DO NOT EXIST", ip) //vi kan ju inte ta bort något som inte finns...
 	}
 }
 
@@ -480,8 +486,16 @@ func AddMaster(rw http.ResponseWriter, r *http.Request) {
 }
 
 func AddMasterToList(ip string) {
-	mastersIp = append(mastersIp, ip)
-	fmt.Println("Registered new master: " + ip)
+	ok := true
+	for i := 0; i < len(mastersIp); i++ {
+		if ip == mastersIp[i] {
+			ok = false
+		}
+	}
+	if ok {
+		mastersIp = append(mastersIp, ip)
+		fmt.Println("Registered new master: " + ip)
+	}
 }
 
 func RemoveMaster(ip string) {
@@ -494,12 +508,12 @@ func RemoveMaster(ip string) {
 			url := "http://" + routerAddress + "/master/" + mastersIp[i]
 			r, err := http.NewRequest("DELETE", url, nil)
 			if err != nil {
-				fmt.Printf("ERROR: Making request" + url)
+				fmt.Println("ERROR: Making request" + url)
 			}
 			client := &http.Client{}
 			resp, err := client.Do(r)
 			if err != nil {
-				fmt.Printf("ERROR: Sending request" + url + "\n")
+				fmt.Println("ERROR: Sending request" + url)
 			}
 			fmt.Println("Removed: " + ip + " Router: " + resp.Status)
 			mastersIp[i] = mastersIp[len(mastersIp)-1]
@@ -509,7 +523,9 @@ func RemoveMaster(ip string) {
 }
 
 func MasterHeartbeat() {
-	for {
+	heart := true
+	for heart == true{
+		routerOk := true
 		time.Sleep(5000 * time.Millisecond)
 		if len(mastersIp) > 0 {
 			for i := 0; i < len(mastersIp); i++ {
@@ -532,6 +548,26 @@ func MasterHeartbeat() {
 				} else {
 					fmt.Println("Response datanode: " + conn.RemoteAddr().String() + " Status: OK")
 				}
+			}
+		}
+		conn, err := net.DialTimeout("tcp", routerAddress, 10000*time.Millisecond)
+		if err != nil {
+			routerOk = false
+			fmt.Println("Timeout router: " + routerAddress)
+			mastersIp = nil
+			fmt.Println("Removed listed master...")
+		}else{
+			fmt.Println("Response router: " + conn.RemoteAddr().String() + " Status: OK")
+		}
+		for routerOk == false {
+			fmt.Println("Retrying connection to router...")
+			time.Sleep(5000 * time.Millisecond)
+			conn, err := net.DialTimeout("tcp", routerAddress, 10000*time.Millisecond)
+			if err == nil {
+				fmt.Println("Reconnecting to " + conn.RemoteAddr().String() + " Status: OK")
+				NotifyRouter()
+				routerOk = true
+				heart = false	
 			}
 		}
 	}
