@@ -254,9 +254,7 @@ func getLastInsertFile(file string) string {
 
 //Func for multicasting id of file to delete to nodes
 func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
-	fmt.Println("master ok")
 	id := mux.Vars(r)["id"] //Get file id from request path
-	output := ""
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
@@ -274,12 +272,13 @@ func FileDeleteHandler(rw http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println(rw, "ERROR: Sending request"+u)
 		}
-		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n" //Output string
+		fmt.Printf("Master sen delete req to: %s\n", nodes.node[i].address)
+		fmt.Println(resp.Status)
 	}
 
 	DeleteFileFromDB(id)
+	fmt.Println("All files deleted")
 
-	fmt.Println("Master sent delete req")
 }
 
 func DeleteFileFromDB(id string) string {

@@ -165,7 +165,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Router sent get file req")
 
-	fmt.Println("Router recieved: ")
+	fmt.Println("Router recieved file: ")
 	fmt.Println(resp.Status)
 
 	context := Context{Title: "TEST!"}
@@ -195,8 +195,8 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 		fmt.Println(rw, "ERROR: Sending request"+u)
 	}
-	fmt.Printf("Router recieved %s\n", resp.Status)
 	fmt.Println("Router sent delete req")
+	fmt.Printf("Router recieved %s\n", resp.Status)
 	context := Context{Title: "TEST!"}
 	render(rw, "list", context)
 }
