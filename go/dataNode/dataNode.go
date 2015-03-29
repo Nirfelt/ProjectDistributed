@@ -14,12 +14,14 @@ import (
 )
 
 //string that points to the devise own home folder and port as subfolder
-var basePath string = os.Getenv("HOME") + "/" + os.Getenv("PORT")
+
+var basePath string = os.Getenv("HOME") + "/dataNode/" + os.Getenv("PORT")
 
 // Address to router
 var routerAddress string = "localhost:9090"
 
 func main() {
+	os.Mkdir(os.Getenv("HOME")+"/dataNode", 0777)
 	r := mux.NewRouter()
 
 	update := r.Path("/files").Subrouter()
