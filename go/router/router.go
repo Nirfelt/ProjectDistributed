@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net"
@@ -10,8 +12,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"flag"
-	"html/template"
 
 	"github.com/gorilla/mux"
 )
@@ -25,13 +25,14 @@ type master struct {
 }
 
 type Context struct {
-    Title  string
-    Static string
-    Files string
+	Title  string
+	Static string
+	Files  string
 }
 
 var masters = masterlist{} // List with masters (struct)
 var id = 0
+
 const STATIC_URL string = "/static/"
 
 func main() {
@@ -68,38 +69,38 @@ func main() {
 }
 
 func Index(w http.ResponseWriter, req *http.Request) {
-    context := Context{Title: "Files: "}
-    render(w, "list", context)
+	context := Context{Title: "Files: "}
+	render(w, "list", context)
 }
 
 func render(w http.ResponseWriter, tmpl string, context Context) {
-    context.Static = STATIC_URL
-    context.Files = WriteFiles()
-    tmpl_list := []string{"templates/index.html",
-        fmt.Sprintf("templates/%s.html", tmpl)}
-    t, err := template.ParseFiles(tmpl_list...)
-    if err != nil {
-        fmt.Println("template parsing error: ", err)
-    }
-    err = t.Execute(w, context)
-    if err != nil {
-        fmt.Println("template executing error: ", err)
-    }
+	context.Static = STATIC_URL
+	context.Files = WriteFiles()
+	tmpl_list := []string{"templates/index.html",
+		fmt.Sprintf("templates/%s.html", tmpl)}
+	t, err := template.ParseFiles(tmpl_list...)
+	if err != nil {
+		fmt.Println("template parsing error: ", err)
+	}
+	err = t.Execute(w, context)
+	if err != nil {
+		fmt.Println("template executing error: ", err)
+	}
 }
 
-func WriteFiles() string{
+func WriteFiles() string {
 	output := ""
 	resp, err := http.Get("http://" + masters.master[0].address + "/get_filenames")
-	if err != nil{
+	if err != nil {
 		fmt.Println("ERROR: Getting filelist")
-	}else{
+	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
 		files := strings.Split(strings.TrimLeft(string(body), ","), ",")
 		for i := 0; i < len(files); i++ {
 			output += fmt.Sprintf("%s", files[i])
 		}
 	}
-	
+
 	return output
 }
 
@@ -130,7 +131,7 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println(output)
 	//fmt.Fprintf(rw, output)
 	context := Context{Title: "TEST!"}
-    render(rw, "list", context)
+	render(rw, "list", context)
 }
 
 func GetPrimaryHandler(rw http.ResponseWriter, r *http.Request) {
@@ -145,24 +146,30 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	id := r.FormValue("id")
 
-	url := "http://" + masters.master[0].address + "/files/" + id
+	u := "http://" + masters.master[0].address + "/files/" + id
 
-	//Send request
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
+		fmt.Println(rw, "ERROR: Making request"+u)
+	}
+	req.Header = r.Header
+	req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println(rw, "ERROR: Sending request"+u)
 	}
 
-	defer resp.Body.Close()
+	fmt.Println("Router sent get file req")
 
-	fmt.Println("Router sent GET file req")
+	fmt.Println("Router recieved: ")
+	fmt.Println(resp.Body)
 
-	data, err := ioutil.ReadAll(resp.Body)
-
-	fmt.Println("Router recieved file")
-	fmt.Println(data)
 	context := Context{Title: "TEST!"}
-    render(rw, "list", context)
+	render(rw, "list", context)
 }
 
 func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
@@ -191,7 +198,7 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Router recieved %s\n", resp.Status)
 	fmt.Println("Router sent delete req")
 	context := Context{Title: "TEST!"}
-    render(rw, "list", context)
+	render(rw, "list", context)
 }
 
 func AddMaster(address string) {

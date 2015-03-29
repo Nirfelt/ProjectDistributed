@@ -17,9 +17,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
-	"sync"
 )
 
 type dataNodes struct {
@@ -83,11 +83,11 @@ func main() {
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
 
-func GetFilenames(rw http.ResponseWriter, r *http.Request){
+func GetFilenames(rw http.ResponseWriter, r *http.Request) {
 	resp, err := http.Get("http://" + nodes.node[0].address + "/files")
-	if err != nil{
+	if err != nil {
 		fmt.Println("ERROR: Filenames")
-	}else{
+	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
 		rw.Write(body)
 	}
@@ -126,26 +126,28 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 		all_ip = append(all_ip, ip)
 	}
 
-	ip := all_ip[rand.Intn(len(all_ip))]
+	//ip := all_ip[rand.Intn(len(all_ip))]
+	ip := nodes.node[rand.Intn(len(nodes.node))].address
 
-	url := "http://" + ip + "/files/" + id
+	u := "http://" + ip + "/files/" + id //Specific url for every node
 
-	//Send request
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", u, nil) //Create new request
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(rw, "ERROR: Making request"+u)
+	}
+	req.Header = r.Header
+	req.URL.Scheme = strings.Map(unicode.ToLower, req.URL.Scheme)
+
+	client := &http.Client{}
+	resp, err := client.Do(req) //Send request, get response
+	if err != nil {
+		fmt.Println(rw, "ERROR: Sending request"+u)
 	}
 
-	//defer resp.Body.Close()
+	fmt.Println("Master sent GET req")
 
-	fmt.Println("Master sent GET file req")
-
-	data, err := ioutil.ReadAll(resp.Body)
-
-	rw.Write(data)
-
-	fmt.Println("Master sent file to router")
-	fmt.Println(data)
+	fmt.Println("Master recieved file: ")
+	fmt.Println(resp.Body)
 }
 
 func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
@@ -444,7 +446,7 @@ func RemoveDataNode(ip string) {
 	if len(nodes.node) == 0 {
 		return
 	}
-	for i := 0; i < len(nodes.node); i++  {
+	for i := 0; i < len(nodes.node); i++ {
 		if nodes.node[i].address == ip {
 			nodes.node[i] = nodes.node[len(nodes.node)-1]
 			nodes.node = nodes.node[:len(nodes.node)-1]
@@ -524,7 +526,7 @@ func RemoveMaster(ip string) {
 
 func MasterHeartbeat() {
 	heart := true
-	for heart == true{
+	for heart == true {
 		routerOk := true
 		time.Sleep(5000 * time.Millisecond)
 		if len(mastersIp) > 0 {
@@ -556,7 +558,7 @@ func MasterHeartbeat() {
 			fmt.Println("Timeout router: " + routerAddress)
 			mastersIp = nil
 			fmt.Println("Removed listed master...")
-		}else{
+		} else {
 			fmt.Println("Response router: " + conn.RemoteAddr().String() + " Status: OK")
 		}
 		for routerOk == false {
@@ -567,7 +569,7 @@ func MasterHeartbeat() {
 				fmt.Println("Reconnecting to " + conn.RemoteAddr().String() + " Status: OK")
 				NotifyRouter()
 				routerOk = true
-				heart = false	
+				heart = false
 			}
 		}
 	}
