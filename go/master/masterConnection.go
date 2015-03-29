@@ -147,7 +147,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("Master sent GET req")
 
 	fmt.Println("Master recieved file: ")
-	fmt.Println(resp.Body)
+	fmt.Println(resp.Status)
 }
 
 func GetSisterNode(rw http.ResponseWriter, r *http.Request) {

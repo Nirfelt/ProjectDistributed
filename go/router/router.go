@@ -166,7 +166,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("Router sent get file req")
 
 	fmt.Println("Router recieved: ")
-	fmt.Println(resp.Body)
+	fmt.Println(resp.Status)
 
 	context := Context{Title: "TEST!"}
 	render(rw, "list", context)
