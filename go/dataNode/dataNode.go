@@ -21,6 +21,7 @@ var basePath string = os.Getenv("HOME") + "/dataNode/" + os.Getenv("PORT")
 var routerAddress string = "localhost:9090"
 
 func main() {
+	//Create sub dir for dataNode storage
 	os.Mkdir(os.Getenv("HOME")+"/dataNode", 0777)
 	r := mux.NewRouter()
 
