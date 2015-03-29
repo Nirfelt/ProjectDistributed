@@ -83,6 +83,7 @@ func main() {
 	http.ListenAndServe(":"+os.Getenv("PORT"), r)
 }
 
+// Gets all filenames from datanode
 func GetFilenames(rw http.ResponseWriter, r *http.Request) {
 	resp, err := http.Get("http://" + nodes.node[0].address + "/files")
 	if err != nil {
@@ -126,7 +127,6 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 		all_ip = append(all_ip, ip)
 	}
 
-	//ip := all_ip[rand.Intn(len(all_ip))]
 	ip := nodes.node[rand.Intn(len(nodes.node))].address
 
 	u := "http://" + ip + "/files/" + id //Specific url for every node
@@ -162,20 +162,9 @@ func GetSisterNode(rw http.ResponseWriter, r *http.Request) {
 }
 
 func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
-	//_, header, _ := r.FormFile("file")
-	//year := r.FormValue("year")
-	//course := r.FormValue("course")
-	//faculty := r.FormValue("faculty")
-
 	output := ""
 	//Read body
 	body, _ := ioutil.ReadAll(r.Body)
-
-	//name, output := AddFile(header.Filename, year, course, faculty)
-
-	//id := getLastInsertFile(name)
-
-	//fmt.Println("LAST INSERTED " + id)
 
 	// Loop over all data nodes
 	for i := 0; i < len(nodes.node); i++ {
@@ -195,11 +184,9 @@ func ProxyHandlerFunc(rw http.ResponseWriter, r *http.Request) {
 			fmt.Println(rw, "ERROR: Sending request"+u)
 		}
 		output = output + u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto + "\n\n"
-		//output += AddFileToNode(nodes.node[i].address, id)
 	}
 	fmt.Println(output)
 	fmt.Fprintf(rw, output)
-	//Add to DB
 }
 
 //Adderar fil med name, year, course och faculty från input
@@ -324,11 +311,13 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Adds datanode to list
 func GetNewNode(rw http.ResponseWriter, r *http.Request) {
 	ip := mux.Vars(r)["ip"]
 	AddDataNode(ip)
 }
 
+//Returns all listed datanodes
 func ShareNodes(rw http.ResponseWriter, r *http.Request) {
 	output := ""
 	if len(nodes.node) > 0 {
@@ -340,6 +329,7 @@ func ShareNodes(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte(output))
 }
 
+//Gets all registered masters from other master
 func GetNodes() {
 	if len(mastersIp) > 0 {
 		url := "http://" + mastersIp[0] + "/share_nodes"
@@ -365,9 +355,11 @@ func GetNodes() {
 	}
 }
 
+// Makes handshake with router
 func NotifyRouter() {
-	masterAddress := "localhost:" + os.Getenv("PORT")
+	masterAddress := "localhost:" + os.Getenv("PORT") //Sets port to listen to
 
+	//Connect to router
 	url := "http://" + routerAddress + "/handshake/" + masterAddress
 	r, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -380,7 +372,7 @@ func NotifyRouter() {
 		fmt.Printf("ERROR: Sending request" + url + "\n")
 	}
 	fmt.Println("Handshake: " + routerAddress + ", router")
-
+	//Get all registered masters
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("ERROR: Recieving master ip")
@@ -393,8 +385,8 @@ func NotifyRouter() {
 			}
 		}
 	}
-	GetNodes()
-	go MasterHeartbeat()
+	GetNodes()//Get nodes from other master
+	go MasterHeartbeat()//Start heartbeats
 }
 
 //Adding a dataNode to master list and DB
@@ -414,7 +406,6 @@ func AddDataNode(ip string) {
 		AddNodeToDB(ip)
 	}
 	mutex.Unlock()
-	//Connect to DB
 }
 
 func AddNodeToDB(ip string) {
@@ -523,6 +514,7 @@ func RemoveMaster(ip string) {
 	}
 }
 
+//Heartbeats. Checks masters, datanodes and router connections
 func MasterHeartbeat() {
 	heart := true
 	for heart == true {

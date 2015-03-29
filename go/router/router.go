@@ -68,6 +68,7 @@ func main() {
 
 }
 
+// WEBFILE HANDLERS
 func Index(w http.ResponseWriter, req *http.Request) {
 	context := Context{Title: "Files: "}
 	render(w, "list", context)
@@ -103,6 +104,8 @@ func WriteFiles() string {
 
 	return output
 }
+// END WEBFILE HANDLERS
+
 
 func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	if len(masters.master) == 0 {
@@ -129,8 +132,7 @@ func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	output = u + "\nStatus: " + resp.Status + "\nProtocol: " + resp.Proto
 	fmt.Println(output)
-	//fmt.Fprintf(rw, output)
-	context := Context{Title: "TEST!"}
+	context := Context{Title: "Files:"}
 	render(rw, "list", context)
 }
 
@@ -168,7 +170,7 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("Router recieved file: ")
 	fmt.Println(resp.Status)
 
-	context := Context{Title: "TEST!"}
+	context := Context{Title: "Files:"}
 	render(rw, "list", context)
 }
 
@@ -202,7 +204,6 @@ func DeleteFileHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func AddMaster(address string) {
-
 	master := master{address: address}
 	masters.master = append(masters.master, master)
 
@@ -222,6 +223,7 @@ func RemoveMaster(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Handles master handshake, multicast to all connected masters
 func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	handshake := mux.Vars(r)["masterAddress"]
 	output := "No masters to update\n"
@@ -246,6 +248,7 @@ func HandshakeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println(output)
 }
 
+//Heartbeatsmethod to check master status if only one master online
 func Heartbeat() {
 	for {
 		time.Sleep(5000 * time.Millisecond)
