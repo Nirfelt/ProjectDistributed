@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/gorilla/mux"
 	"html/template"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/gorilla/mux"
 )
 
 type masterlist struct {
@@ -104,8 +104,8 @@ func WriteFiles() string {
 
 	return output
 }
-// END WEBFILE HANDLERS
 
+// END WEBFILE HANDLERS
 
 func UploadHandler(rw http.ResponseWriter, r *http.Request) {
 	if len(masters.master) == 0 {
@@ -148,7 +148,9 @@ func GetFileHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	id := r.FormValue("id")
 
-	u := "http://" + masters.master[0].address + "/files/" + id
+	ip := masters.master[rand.Intn(len(masters.master))].address
+
+	u := "http://" + ip + "/files/" + id
 
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
